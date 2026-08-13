@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#8fa1aa">
-<title>大福｜寶寶生長助手 V3.6</title>
+<title>大福｜寶寶生長助手 V3.7</title>
 <style>
 :root{
   --bg:#eef2f4;--panel:#fff;--ink:#263238;--muted:#73808a;--line:#d7e0e5;
@@ -57,7 +57,7 @@ svg{width:100%;height:auto;display:block}
   <section class="hero">
     <div class="age" id="ageText">大福</div>
     <h1>成長曲線</h1>
-    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards｜V3.6</div>
+    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards｜V3.7</div>
   </section>
 
   <section class="card">
@@ -72,7 +72,7 @@ svg{width:100%;height:auto;display:block}
       </select></div>
     </div>
     <button class="primary" id="saveBtn">加入這次紀錄</button>
-    <div class="note" style="margin-top:6px;text-align:center">V3.6 歷次紀錄改為獨立顯示，直接使用 Google 試算表回傳資料。</div>
+    <div class="note" style="margin-top:6px;text-align:center">V3.7 歷次紀錄改為獨立顯示，直接使用 Google 試算表回傳資料。</div>
     <button class="secondary" id="syncBtn" type="button" style="width:100%;margin-top:8px">重新同步共用資料</button>
     <div id="syncStatus" class="note" style="margin-top:8px;text-align:center" aria-live="polite">正在同步共用資料…</div>
     <div class="stats" id="stats">
@@ -106,7 +106,7 @@ svg{width:100%;height:auto;display:block}
   </section>
 
 
-  <p class="note">資料來源：WHO Child Growth Standards。V3.6 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。圖表可切換身高＋體重、身高、體重、頭圍。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
+  <p class="note">資料來源：WHO Child Growth Standards。V3.7 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。圖表可切換身高＋體重、身高、體重、頭圍。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
 </div>
 
 <script>
@@ -118,7 +118,7 @@ let view="hw";
 let records=[];
 let cloudRecords=[];
 
-// V3.6：Google 試算表是唯一正式資料來源。
+// V3.7：Google 試算表是唯一正式資料來源。
 // 新增 / 刪除都直接等待 Apps Script 回傳最新 records，不再靠 no-cors POST。
 
 const $=s=>document.querySelector(s);
@@ -137,10 +137,27 @@ function ageLabel(date){
   return `${months} 個月 ${days} 天`;
 }
 function interp(type,m){
-  const arr=DATA[type], mm=Math.min(24,Math.max(0,m));
-  const i=Math.floor(mm), j=Math.min(24,i+1), t=mm-i;
-  const a=arr[i],b=arr[j],o={};
-  ["L","M","S",...PCTS].forEach(k=>o[k]=a[k]+(b[k]-a[k])*t);
+  const arr=DATA[type];
+  if(!Array.isArray(arr) || !arr.length) return null;
+
+  const maxIndex=arr.length-1;
+  const mm=Math.min(maxIndex,Math.max(0,Number(m)||0));
+  const i=Math.min(maxIndex,Math.floor(mm));
+  const j=Math.min(maxIndex,i+1);
+  const t=mm-i;
+
+  const a=arr[i];
+  const b=arr[j] || a;
+  if(!a) return null;
+
+  const o={};
+  ["L","M","S",...PCTS].forEach(k=>{
+    const av=Number(a[k]);
+    const bv=Number(b?.[k]);
+    o[k]=Number.isFinite(av) && Number.isFinite(bv)
+      ? av+(bv-av)*t
+      : (Number.isFinite(av)?av:null);
+  });
   return o;
 }
 function erf(x){
@@ -151,7 +168,9 @@ function erf(x){
 }
 function percentile(type,m,val){
   if(!isFinite(val))return null;
-  const q=interp(type,m); let z;
+  const q=interp(type,m);
+  if(!q || !isFinite(q.L) || !isFinite(q.M) || !isFinite(q.S) || q.M<=0 || q.S===0) return null;
+  let z;
   if(Math.abs(q.L)<1e-9) z=Math.log(val/q.M)/q.S;
   else z=(Math.pow(val/q.M,q.L)-1)/(q.L*q.S);
   return 100*(.5*(1+erf(z/Math.sqrt(2))));
@@ -272,7 +291,7 @@ $("#saveBtn").addEventListener("click", async ()=>{
   }
 
   if(ageMonths(date)>24){
-    alert("V3.6 目前先支援 0–24 個月；之後可再擴充到 5 歲 / 7 歲。");
+    alert("V3.7 目前先支援 0–24 個月；之後可再擴充到 5 歲 / 7 歲。");
     return;
   }
 
@@ -322,7 +341,7 @@ $("#saveBtn").addEventListener("click", async ()=>{
 });
 
 $("#clearBtn").addEventListener("click",()=>{
-  alert("V3.6 每筆歷史紀錄後方都有刪除鍵；刪除確認後會直接同步移除 Google 試算表資料。");
+  alert("V3.7 每筆歷史紀錄後方都有刪除鍵；刪除確認後會直接同步移除 Google 試算表資料。");
 });
 document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click",()=>{
   document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
