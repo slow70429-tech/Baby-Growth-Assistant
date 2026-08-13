@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#8fa1aa">
-<title>大福｜寶寶生長助手 V2.9</title>
+<title>大福｜寶寶生長助手 V3.0</title>
 <style>
 :root{
   --bg:#eef2f4;--panel:#fff;--ink:#263238;--muted:#73808a;--line:#d7e0e5;
@@ -46,7 +46,7 @@ svg{width:100%;height:auto;display:block}
   <section class="hero">
     <div class="age" id="ageText">大福</div>
     <h1>成長曲線</h1>
-    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards｜V2.9</div>
+    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards｜V3.0</div>
   </section>
 
   <section class="card">
@@ -61,7 +61,7 @@ svg{width:100%;height:auto;display:block}
       </select></div>
     </div>
     <button class="primary" id="saveBtn">加入這次紀錄</button>
-    <div class="note" style="margin-top:6px;text-align:center">新增成功後會自動清空身高、體重、頭圍，方便輸入下一筆。</div>
+    <div class="note" style="margin-top:6px;text-align:center">新增成功後會自動清空身高、體重、頭圍，並自動同步共用資料。</div>
     <button class="secondary" id="syncBtn" type="button" style="width:100%;margin-top:8px">重新同步共用資料</button>
     <div id="syncStatus" class="note" style="margin-top:8px;text-align:center" aria-live="polite">正在同步共用資料…</div>
     <div class="stats" id="stats">
@@ -96,7 +96,7 @@ svg{width:100%;height:auto;display:block}
   </section>
 
 
-  <p class="note">資料來源：WHO Child Growth Standards。V2.9 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。圖表可切換身高＋體重、身高、體重、頭圍。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
+  <p class="note">資料來源：WHO Child Growth Standards。V3.0 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。圖表可切換身高＋體重、身高、體重、頭圍。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
 </div>
 
 <script>
@@ -109,7 +109,7 @@ let records=[];
 let cloudRecords=[];
 let pendingRecords=JSON.parse(localStorage.getItem("babyGrowthPending")||"[]");
 
-// V2.9 起 Google 試算表為正式歷史紀錄來源。
+// V3.0 起 Google 試算表為正式歷史紀錄來源。
 // 舊版 babyGrowthDafu 只當快取，不再拿來覆蓋雲端刪除結果。
 localStorage.removeItem("babyGrowthDafu");
 
@@ -211,12 +211,37 @@ function sameMeasurement(a,b){
     (a.head==null?null:Number(a.head))===(b.head==null?null:Number(b.head));
 }
 
+
+function sleep(ms){
+  return new Promise(resolve=>setTimeout(resolve,ms));
+}
+
+async function autoSyncUntil(target, shouldExist){
+  const delays=[900,1400,2000,2800,3800];
+
+  for(let i=0;i<delays.length;i++){
+    await sleep(delays[i]);
+    await loadCloud(true);
+
+    const exists=cloudRecords.some(r=>sameMeasurement(r,target));
+    if(exists===shouldExist){
+      $("#syncStatus").textContent=shouldExist
+        ? "✓ 已自動同步共用資料"
+        : "✓ 已刪除並自動同步";
+      return true;
+    }
+  }
+
+  $("#syncStatus").textContent="⚠ 雲端處理較慢，可按「重新同步共用資料」再次確認";
+  return false;
+}
+
 $("#saveBtn").addEventListener("click", ()=>{
   const date=$("#measureDate").value;
   const height=parseFloat($("#height").value),weight=parseFloat($("#weight").value),head=parseFloat($("#head").value);
   const recorder=$("#recorder").value;
   if(!date || (!isFinite(height)&&!isFinite(weight)&&!isFinite(head))){alert("請至少輸入一項測量數值");return}
-  if(ageMonths(date)>24){alert("V2.9 目前先支援 0–24 個月；之後可再擴充到 5 歲 / 7 歲。");return}
+  if(ageMonths(date)>24){alert("V3.0 目前先支援 0–24 個月；之後可再擴充到 5 歲 / 7 歲。");return}
 
   const item={
     date,
@@ -258,8 +283,8 @@ $("#saveBtn").addEventListener("click", ()=>{
   }).then(()=>{
     finished=true;
     clearTimeout(timer);
-    $("#syncStatus").textContent=`✓ 已送出共用資料（${recorder}），等待雲端確認`;
-    setTimeout(()=>loadCloud(true),1600);
+    $("#syncStatus").textContent=`✓ 已送出共用資料（${recorder}），正在自動確認…`;
+    autoSyncUntil(item,true);
   }).catch(()=>{
     finished=true;
     clearTimeout(timer);
@@ -283,7 +308,7 @@ $("#clearPendingBtn").addEventListener("click",()=>{
 });
 
 $("#clearBtn").addEventListener("click",()=>{
-  alert("V2.9 的正式歷史紀錄以 Google 試算表為準。若要刪除某筆資料，請直接在 Google 試算表刪除該列，再回網頁按「重新同步共用資料」。");
+  alert("V3.0 的正式歷史紀錄以 Google 試算表為準。若要刪除某筆資料，請直接在 Google 試算表刪除該列，再回網頁按「重新同步共用資料」。");
 });
 document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click",()=>{
   document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
@@ -479,9 +504,9 @@ function renderRecords(){
           })
         });
 
-        // no-cors 無法直接讀回傳，所以稍等 Apps Script 寫入完成再重抓
-        $("#syncStatus").textContent="✓ 已送出刪除要求，正在重新同步…";
-        setTimeout(()=>loadCloud(false),1200);
+        // no-cors 無法直接讀回傳，因此自動輪詢直到雲端確實刪除
+        $("#syncStatus").textContent="✓ 已送出刪除要求，正在自動確認…";
+        autoSyncUntil(target,false);
 
       }catch(err){
         btn.disabled=false;
