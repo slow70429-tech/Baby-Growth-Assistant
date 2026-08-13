@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#8fa1aa">
-<title>大福｜寶寶生長助手 V2 共用版</title>
+<title>大福｜寶寶生長助手 V2.1</title>
 <style>
 :root{
   --bg:#eef2f4;--panel:#fff;--ink:#263238;--muted:#73808a;--line:#d7e0e5;
@@ -25,7 +25,7 @@ button{border:0;border-radius:12px;padding:12px 14px;font-size:17px;font-weight:
 .primary{background:#829aa5;color:#fff;width:100%;margin-top:12px}
 .secondary{background:#edf2f4;color:#44525a}
 .danger{background:#fff0f0;color:#b64a4a}
-.tabs{display:flex;gap:8px;margin:8px 0 12px}
+.tabs{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:8px 0 12px}
 .tab{flex:1;background:#eef3f5;color:#596973}
 .tab.active{background:#879ca6;color:#fff}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
@@ -35,8 +35,8 @@ svg{width:100%;height:auto;display:block}
 .legend{display:flex;flex-wrap:wrap;gap:10px 14px;font-size:13px;color:#64717a;padding:2px 10px 8px}
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
 .records{width:100%;border-collapse:collapse;font-size:14px}
-.records th,.records td{padding:9px 5px;border-bottom:1px solid #edf1f3;text-align:center}
-.records th{color:#68747d;font-weight:600}
+.records th,.records td{padding:9px 7px;border-bottom:1px solid #edf1f3;text-align:center;white-space:nowrap}
+.records th{color:#68747d;font-weight:600}.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}.pr{font-weight:700;color:#52636c}
 .note{font-size:12px;color:#7a8790;line-height:1.55}
 .empty{text-align:center;color:#8a969d;padding:18px 0}
 </style>
@@ -46,7 +46,7 @@ svg{width:100%;height:auto;display:block}
   <section class="hero">
     <div class="age" id="ageText">大福</div>
     <h1>成長曲線</h1>
-    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards</div>
+    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards｜V2.1</div>
   </section>
 
   <section class="card">
@@ -70,7 +70,9 @@ svg{width:100%;height:auto;display:block}
   </section>
 
   <div class="tabs">
-    <button class="tab active" data-view="hw">身高 / 體重</button>
+    <button class="tab active" data-view="hw">身高＋體重</button>
+    <button class="tab" data-view="height">身高</button>
+    <button class="tab" data-view="weight">體重</button>
     <button class="tab" data-view="head">頭圍</button>
   </div>
 
@@ -87,7 +89,7 @@ svg{width:100%;height:auto;display:block}
     <div id="recordArea"></div>
   </section>
 
-  <p class="note">資料來源：WHO Child Growth Standards。V1 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
+  <p class="note">資料來源：WHO Child Growth Standards。V2.1 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。圖表可切換身高＋體重、身高、體重、頭圍。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
 </div>
 
 <script>
@@ -193,54 +195,137 @@ document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click",()=>
 
 function linePath(points){return points.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ")}
 function drawChart(){
-  const W=720,H=620,Lm=58,Rm=58,Tm=38,Bm=58,pw=W-Lm-Rm,ph=H-Tm-Bm;
+  const W=720,H=620,Lm=62,Rm=62,Tm=42,Bm=58,pw=W-Lm-Rm,ph=H-Tm-Bm;
   const xm=m=>Lm+pw*(m/24);
-  let inner="";
-  // grid
+  let inner="",legend="";
+
   for(let m=0;m<=24;m+=2){
-    const x=xm(m);inner+=`<line x1="${x}" y1="${Tm}" x2="${x}" y2="${H-Bm}" stroke="#d6dde1" stroke-dasharray="2 5"/><text x="${x}" y="${H-27}" text-anchor="middle" fill="#6d7981" font-size="14">${m}</text>`;
+    const x=xm(m);
+    inner+=`<line x1="${x}" y1="${Tm}" x2="${x}" y2="${H-Bm}" stroke="#d6dde1" stroke-dasharray="2 5"/>
+      <text x="${x}" y="${H-27}" text-anchor="middle" fill="#6d7981" font-size="14">${m}</text>`;
   }
-  let legend="";
+
+  function addBand(type,y,color,fill){
+    const p3=DATA[type].map((d,i)=>[xm(i),y(d.P3)]);
+    const p97=DATA[type].map((d,i)=>[xm(i),y(d.P97)]);
+    inner+=`<path d="${linePath(p3)} ${p97.slice().reverse().map(p=>"L"+p[0]+","+p[1]).join(" ")} Z" fill="${fill}" opacity=".52"/>`;
+    PCTS.forEach(p=>{
+      inner+=`<path d="${linePath(DATA[type].map((d,i)=>[xm(i),y(d[p])]))}" fill="none" stroke="${color}" stroke-width="${p==="P50"?2:1}" opacity="${p==="P50"?.68:.28}"/>`;
+    });
+  }
+
+  function addBabyLine(type,key,y,color){
+    const pts=records.filter(r=>r[key]!=null).map(r=>[xm(ageMonths(r.date)),y(r[key])]);
+    if(pts.length){
+      inner+=`<path d="${linePath(pts)}" fill="none" stroke="${color}" stroke-width="3"/>`;
+      inner+=pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="5" fill="${color}"/>`).join("");
+    }
+  }
+
   if(view==="hw"){
     const yminW=2,ymaxW=16,yminH=44,ymaxH=95;
     const yw=v=>Tm+ph*(1-(v-yminW)/(ymaxW-yminW));
     const yh=v=>Tm+ph*(1-(v-yminH)/(ymaxH-yminH));
-    for(let v=2;v<=16;v+=2){let y=yw(v);inner+=`<line x1="${Lm}" y1="${y}" x2="${W-Rm}" y2="${y}" stroke="#e0e5e8" stroke-dasharray="2 5"/><text x="${Lm-8}" y="${y+5}" text-anchor="end" fill="#20a86d" font-size="14">${v}</text>`}
-    [45,55,65,75,85,95].forEach(v=>{let y=yh(v);inner+=`<text x="${W-Rm+8}" y="${y+5}" fill="#468fe8" font-size="14">${v}</text>`});
-    // percentile bands
-    const hp3=DATA.height.map((d,i)=>[xm(i),yh(d.P3)]), hp97=DATA.height.map((d,i)=>[xm(i),yh(d.P97)]);
-    const wp3=DATA.weight.map((d,i)=>[xm(i),yw(d.P3)]), wp97=DATA.weight.map((d,i)=>[xm(i),yw(d.P97)]);
-    inner+=`<path d="${linePath(hp3)} ${hp97.slice().reverse().map(p=>"L"+p[0]+","+p[1]).join(" ")} Z" fill="#b9dbfa" opacity=".48"/>`;
-    inner+=`<path d="${linePath(wp3)} ${wp97.slice().reverse().map(p=>"L"+p[0]+","+p[1]).join(" ")} Z" fill="#ccefd9" opacity=".55"/>`;
-    PCTS.forEach(p=>{
-      inner+=`<path d="${linePath(DATA.height.map((d,i)=>[xm(i),yh(d[p])]))}" fill="none" stroke="#468fe8" stroke-width="${p==="P50"?2:1}" opacity="${p==="P50"?.65:.28}"/>`;
-      inner+=`<path d="${linePath(DATA.weight.map((d,i)=>[xm(i),yw(d[p])]))}" fill="none" stroke="#20a86d" stroke-width="${p==="P50"?2:1}" opacity="${p==="P50"?.65:.28}"/>`;
+
+    for(let v=2;v<=16;v+=2){
+      const y=yw(v);
+      inner+=`<line x1="${Lm}" y1="${y}" x2="${W-Rm}" y2="${y}" stroke="#e0e5e8" stroke-dasharray="2 5"/>
+        <text x="${Lm-8}" y="${y+5}" text-anchor="end" fill="#20a86d" font-size="14">${v}</text>`;
+    }
+    [45,55,65,75,85,95].forEach(v=>{
+      const y=yh(v);
+      inner+=`<text x="${W-Rm+8}" y="${y+5}" fill="#468fe8" font-size="14">${v}</text>`;
     });
-    const rh=records.filter(r=>r.height!=null).map(r=>[xm(ageMonths(r.date)),yh(r.height)]);
-    const rw=records.filter(r=>r.weight!=null).map(r=>[xm(ageMonths(r.date)),yw(r.weight)]);
-    if(rh.length)inner+=`<path d="${linePath(rh)}" fill="none" stroke="#287edb" stroke-width="3"/>`+rh.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="5" fill="#287edb"/>`).join("");
-    if(rw.length)inner+=`<path d="${linePath(rw)}" fill="none" stroke="#07955a" stroke-width="3"/>`+rw.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="5" fill="#07955a"/>`).join("");
-    inner+=`<text x="${Lm}" y="22" fill="#20a86d" font-size="14">體重 kg</text><text x="${W-Rm}" y="22" text-anchor="end" fill="#468fe8" font-size="14">身長 cm</text>`;
-    legend=`<span><i class="dot" style="background:#468fe8"></i>大福身高</span><span><i class="dot" style="background:#20a86d"></i>大福體重</span><span>淡色區：WHO P3–P97</span>`;
+
+    addBand("height",yh,"#468fe8","#b9dbfa");
+    addBand("weight",yw,"#20a86d","#ccefd9");
+    addBabyLine("height","height",yh,"#287edb");
+    addBabyLine("weight","weight",yw,"#07955a");
+
+    inner+=`<text x="${Lm}" y="24" fill="#20a86d" font-size="14">體重 kg</text>
+      <text x="${W-Rm}" y="24" text-anchor="end" fill="#468fe8" font-size="14">身長 cm</text>`;
+    legend=`<span><i class="dot" style="background:#468fe8"></i>大福身高</span>
+      <span><i class="dot" style="background:#20a86d"></i>大福體重</span>
+      <span>淡色區：WHO P3–P97</span>`;
+
+  }else if(view==="height"){
+    const ymin=44,ymax=95,y=v=>Tm+ph*(1-(v-ymin)/(ymax-ymin));
+    [45,50,55,60,65,70,75,80,85,90,95].forEach(v=>{
+      const yy=y(v);
+      inner+=`<line x1="${Lm}" y1="${yy}" x2="${W-Rm}" y2="${yy}" stroke="#e0e5e8" stroke-dasharray="2 5"/>
+        <text x="${Lm-8}" y="${yy+5}" text-anchor="end" fill="#468fe8" font-size="14">${v}</text>`;
+    });
+    addBand("height",y,"#468fe8","#b9dbfa");
+    addBabyLine("height","height",y,"#287edb");
+    inner+=`<text x="${Lm}" y="24" fill="#468fe8" font-size="14">身長 / 身高 cm</text>`;
+    legend=`<span><i class="dot" style="background:#468fe8"></i>大福身高</span><span>淡色區：WHO P3–P97</span>`;
+
+  }else if(view==="weight"){
+    const ymin=2,ymax=16,y=v=>Tm+ph*(1-(v-ymin)/(ymax-ymin));
+    for(let v=2;v<=16;v+=1){
+      const yy=y(v);
+      inner+=`<line x1="${Lm}" y1="${yy}" x2="${W-Rm}" y2="${yy}" stroke="#e0e5e8" stroke-dasharray="2 5"/>
+        <text x="${Lm-8}" y="${yy+5}" text-anchor="end" fill="#20a86d" font-size="14">${v}</text>`;
+    }
+    addBand("weight",y,"#20a86d","#ccefd9");
+    addBabyLine("weight","weight",y,"#07955a");
+    inner+=`<text x="${Lm}" y="24" fill="#20a86d" font-size="14">體重 kg</text>`;
+    legend=`<span><i class="dot" style="background:#20a86d"></i>大福體重</span><span>淡色區：WHO P3–P97</span>`;
+
   }else{
-    const ymin=30,ymax=52, y=v=>Tm+ph*(1-(v-ymin)/(ymax-ymin));
-    for(let v=30;v<=52;v+=2){let yy=y(v);inner+=`<line x1="${Lm}" y1="${yy}" x2="${W-Rm}" y2="${yy}" stroke="#e0e5e8" stroke-dasharray="2 5"/><text x="${Lm-8}" y="${yy+5}" text-anchor="end" fill="#7d6bb3" font-size="14">${v}</text>`}
-    const p3=DATA.head.map((d,i)=>[xm(i),y(d.P3)]), p97=DATA.head.map((d,i)=>[xm(i),y(d.P97)]);
-    inner+=`<path d="${linePath(p3)} ${p97.slice().reverse().map(p=>"L"+p[0]+","+p[1]).join(" ")} Z" fill="#dcd4f2" opacity=".65"/>`;
-    PCTS.forEach(p=>inner+=`<path d="${linePath(DATA.head.map((d,i)=>[xm(i),y(d[p])]))}" fill="none" stroke="#7966ae" stroke-width="${p==="P50"?2:1}" opacity="${p==="P50"?.7:.3}"/>`);
-    const rr=records.filter(r=>r.head!=null).map(r=>[xm(ageMonths(r.date)),y(r.head)]);
-    if(rr.length)inner+=`<path d="${linePath(rr)}" fill="none" stroke="#6650a4" stroke-width="3"/>`+rr.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="5" fill="#6650a4"/>`).join("");
-    inner+=`<text x="${Lm}" y="22" fill="#6650a4" font-size="14">頭圍 cm</text>`;
+    const ymin=30,ymax=52,y=v=>Tm+ph*(1-(v-ymin)/(ymax-ymin));
+    for(let v=30;v<=52;v+=2){
+      const yy=y(v);
+      inner+=`<line x1="${Lm}" y1="${yy}" x2="${W-Rm}" y2="${yy}" stroke="#e0e5e8" stroke-dasharray="2 5"/>
+        <text x="${Lm-8}" y="${yy+5}" text-anchor="end" fill="#6650a4" font-size="14">${v}</text>`;
+    }
+    addBand("head",y,"#7966ae","#dcd4f2");
+    addBabyLine("head","head",y,"#6650a4");
+    inner+=`<text x="${Lm}" y="24" fill="#6650a4" font-size="14">頭圍 cm</text>`;
     legend=`<span><i class="dot" style="background:#6650a4"></i>大福頭圍</span><span>淡色區：WHO P3–P97</span>`;
   }
-  inner+=`<rect x="${Lm}" y="${Tm}" width="${pw}" height="${ph}" fill="none" stroke="#7e8a91" stroke-width="1.4"/><text x="${W-Rm}" y="${H-7}" text-anchor="end" fill="#6e7a82" font-size="13">月齡（月）</text>`;
-  svg.innerHTML=inner;$("#legend").innerHTML=legend;
+
+  inner+=`<rect x="${Lm}" y="${Tm}" width="${pw}" height="${ph}" fill="none" stroke="#7e8a91" stroke-width="1.4"/>
+    <text x="${W-Rm}" y="${H-7}" text-anchor="end" fill="#6e7a82" font-size="13">月齡（月）</text>`;
+  svg.innerHTML=inner;
+  $("#legend").innerHTML=legend;
 }
+
 function renderRecords(){
   const area=$("#recordArea");
-  if(!records.length){area.innerHTML='<div class="empty">還沒有紀錄，輸入第一筆就會畫到曲線上。</div>';return}
-  area.innerHTML=`<table class="records"><thead><tr><th>日期</th><th>月齡</th><th>身高</th><th>體重</th><th>頭圍</th><th>紀錄者</th></tr></thead><tbody>`+
-    records.slice().reverse().map(r=>`<tr><td>${r.date.replaceAll("-","/")}</td><td>${ageLabel(r.date).replace(" 個月 ","月").replace(" 天","天")}</td><td>${r.height??"—"}</td><td>${r.weight??"—"}</td><td>${r.head??"—"}</td><td>${r.recorder||"—"}</td></tr>`).join("")+`</tbody></table>`;
+  if(!records.length){
+    area.innerHTML='<div class="empty">還沒有紀錄，輸入第一筆就會畫到曲線上。</div>';
+    return;
+  }
+
+  const rows=records.slice().reverse().map(r=>{
+    const m=ageMonths(r.date);
+    const hp=r.height==null?null:percentile("height",m,Number(r.height));
+    const wp=r.weight==null?null:percentile("weight",m,Number(r.weight));
+    const cp=r.head==null?null:percentile("head",m,Number(r.head));
+
+    return `<tr>
+      <td>${r.date.replaceAll("-","/")}</td>
+      <td>${ageLabel(r.date).replace(" 個月 ","月").replace(" 天","天")}</td>
+      <td>${r.height??"—"}</td><td class="pr">${pctText(hp)}</td>
+      <td>${r.weight??"—"}</td><td class="pr">${pctText(wp)}</td>
+      <td>${r.head??"—"}</td><td class="pr">${pctText(cp)}</td>
+      <td>${r.recorder||"—"}</td>
+    </tr>`;
+  }).join("");
+
+  area.innerHTML=`<div class="tablewrap">
+    <table class="records">
+      <thead><tr>
+        <th>日期</th><th>月齡</th>
+        <th>身高</th><th>身高PR</th>
+        <th>體重</th><th>體重PR</th>
+        <th>頭圍</th><th>頭圍PR</th>
+        <th>紀錄者</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
 }
 async function loadCloud(){
   $("#syncStatus").textContent="正在同步共用資料…";
