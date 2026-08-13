@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#8fa1aa">
-<title>大福｜寶寶生長助手 V3.3</title>
+<title>大福｜寶寶生長助手 V3.4</title>
 <style>
 :root{
   --bg:#eef2f4;--panel:#fff;--ink:#263238;--muted:#73808a;--line:#d7e0e5;
@@ -46,7 +46,7 @@ svg{width:100%;height:auto;display:block}
   <section class="hero">
     <div class="age" id="ageText">大福</div>
     <h1>成長曲線</h1>
-    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards｜V3.3</div>
+    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards｜V3.4</div>
   </section>
 
   <section class="card">
@@ -61,7 +61,7 @@ svg{width:100%;height:auto;display:block}
       </select></div>
     </div>
     <button class="primary" id="saveBtn">加入這次紀錄</button>
-    <div class="note" style="margin-top:6px;text-align:center">V3.3 直接寫入 Google 試算表並等待成功回應；成功後會清空身高、體重、頭圍，可立即輸入下一筆。</div>
+    <div class="note" style="margin-top:6px;text-align:center">V3.4 使用 JSONP 直接取得 Google 試算表回傳結果；新增成功後「歷次紀錄」與圖表會同時更新。</div>
     <button class="secondary" id="syncBtn" type="button" style="width:100%;margin-top:8px">重新同步共用資料</button>
     <div id="syncStatus" class="note" style="margin-top:8px;text-align:center" aria-live="polite">正在同步共用資料…</div>
     <div class="stats" id="stats">
@@ -95,7 +95,7 @@ svg{width:100%;height:auto;display:block}
   </section>
 
 
-  <p class="note">資料來源：WHO Child Growth Standards。V3.3 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。圖表可切換身高＋體重、身高、體重、頭圍。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
+  <p class="note">資料來源：WHO Child Growth Standards。V3.4 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。圖表可切換身高＋體重、身高、體重、頭圍。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
 </div>
 
 <script>
@@ -107,7 +107,7 @@ let view="hw";
 let records=[];
 let cloudRecords=[];
 
-// V3.3：Google 試算表是唯一正式資料來源。
+// V3.4：Google 試算表是唯一正式資料來源。
 // 新增 / 刪除都直接等待 Apps Script 回傳最新 records，不再靠 no-cors POST。
 
 const $=s=>document.querySelector(s);
@@ -209,6 +209,45 @@ function sameMeasurement(a,b){
 }
 
 
+
+function apiJSONP(params){
+  return new Promise((resolve,reject)=>{
+    const callback="__babyGrowthCb_"+Date.now()+"_"+Math.random().toString(36).slice(2);
+    const script=document.createElement("script");
+    const url=new URL(API_URL);
+
+    Object.entries(params||{}).forEach(([k,v])=>{
+      url.searchParams.set(k, v==null ? "" : String(v));
+    });
+    url.searchParams.set("callback",callback);
+    url.searchParams.set("_",String(Date.now()));
+
+    const timer=setTimeout(()=>{
+      cleanup();
+      reject(new Error("API timeout"));
+    },10000);
+
+    function cleanup(){
+      clearTimeout(timer);
+      try{ delete window[callback]; }catch(e){ window[callback]=undefined; }
+      script.remove();
+    }
+
+    window[callback]=(data)=>{
+      cleanup();
+      resolve(data);
+    };
+
+    script.onerror=()=>{
+      cleanup();
+      reject(new Error("API load failed"));
+    };
+
+    script.src=url.toString();
+    document.body.appendChild(script);
+  });
+}
+
 $("#saveBtn").addEventListener("click", async ()=>{
   const date=$("#measureDate").value;
   const height=parseFloat($("#height").value);
@@ -222,7 +261,7 @@ $("#saveBtn").addEventListener("click", async ()=>{
   }
 
   if(ageMonths(date)>24){
-    alert("V3.3 目前先支援 0–24 個月；之後可再擴充到 5 歲 / 7 歲。");
+    alert("V3.4 目前先支援 0–24 個月；之後可再擴充到 5 歲 / 7 歲。");
     return;
   }
 
@@ -240,33 +279,30 @@ $("#saveBtn").addEventListener("click", async ()=>{
   $("#syncStatus").textContent="正在寫入共用試算表…";
 
   try{
-    const url=new URL(API_URL);
-    url.searchParams.set("action","add");
-    url.searchParams.set("date",item.date);
-    url.searchParams.set("height",item.height==null?"":String(item.height));
-    url.searchParams.set("weight",item.weight==null?"":String(item.weight));
-    url.searchParams.set("head",item.head==null?"":String(item.head));
-    url.searchParams.set("recorder",item.recorder);
-    url.searchParams.set("_",String(Date.now()));
-
-    const res=await fetch(url.toString(),{cache:"no-store"});
-    const data=await res.json();
+    const data=await apiJSONP({
+      action:"add",
+      date:item.date,
+      height:item.height,
+      weight:item.weight,
+      head:item.head,
+      recorder:item.recorder
+    });
 
     if(!data || !data.ok) throw new Error(data?.message || "新增失敗");
-    if(data.version!=="3.3") throw new Error("Apps Script 尚未更新到 V3.3");
+    if(data.version!=="3.4") throw new Error("Apps Script 尚未更新到 V3.4");
 
     cloudRecords=normalizeRecords(data.records||[]);
     records=cloudRecords.slice();
 
     $("#syncStatus").textContent=data.duplicate
-      ? "ℹ 相同紀錄已存在，未重複新增"
-      : `✓ 新增成功，目前共 ${records.length} 筆`;
+      ? `ℹ 相同紀錄已存在｜目前共 ${records.length} 筆`
+      : `✓ 新增成功｜目前共 ${records.length} 筆`;
 
     renderAll();
     clearMeasurementInputs();
 
   }catch(err){
-    $("#syncStatus").textContent="⚠ 新增失敗，請按「重新同步共用資料」後再試";
+    $("#syncStatus").textContent="⚠ 新增失敗：" + (err?.message || "未知錯誤");
     console.error(err);
   }finally{
     saveBtn.disabled=false;
@@ -275,7 +311,7 @@ $("#saveBtn").addEventListener("click", async ()=>{
 });
 
 $("#clearBtn").addEventListener("click",()=>{
-  alert("V3.3 每筆歷史紀錄後方都有刪除鍵；刪除確認後會直接同步移除 Google 試算表資料。");
+  alert("V3.4 每筆歷史紀錄後方都有刪除鍵；刪除確認後會直接同步移除 Google 試算表資料。");
 });
 document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click",()=>{
   document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
@@ -445,25 +481,22 @@ function renderRecords(){
       $("#syncStatus").textContent="正在刪除共用紀錄…";
 
       try{
-        const url=new URL(API_URL);
-        url.searchParams.set("action","delete");
-        url.searchParams.set("date",target.date);
-        url.searchParams.set("height",target.height==null?"":String(target.height));
-        url.searchParams.set("weight",target.weight==null?"":String(target.weight));
-        url.searchParams.set("head",target.head==null?"":String(target.head));
-        url.searchParams.set("recorder",target.recorder||"");
-        url.searchParams.set("_",String(Date.now()));
-
-        const res=await fetch(url.toString(),{cache:"no-store"});
-        const data=await res.json();
+        const data=await apiJSONP({
+          action:"delete",
+          date:target.date,
+          height:target.height,
+          weight:target.weight,
+          head:target.head,
+          recorder:target.recorder||""
+        });
 
         if(!data || !data.ok) throw new Error(data?.message || "刪除失敗");
-        if(data.version!=="3.3") throw new Error("Apps Script 尚未更新到 V3.3");
+        if(data.version!=="3.4") throw new Error("Apps Script 尚未更新到 V3.4");
 
         cloudRecords=normalizeRecords(data.records||[]);
         records=cloudRecords.slice();
 
-        $("#syncStatus").textContent=`✓ 刪除成功，目前共 ${records.length} 筆`;
+        $("#syncStatus").textContent=`✓ 刪除成功｜目前共 ${records.length} 筆`;
         renderAll();
 
       }catch(err){
@@ -490,15 +523,10 @@ async function loadCloud(silent=false){
   if(!silent) $("#syncStatus").textContent="正在同步共用資料…";
 
   try{
-    const url=new URL(API_URL);
-    url.searchParams.set("action","list");
-    url.searchParams.set("_",String(Date.now()));
+    const data=await apiJSONP({action:"list"});
 
-    const res=await fetch(url.toString(),{cache:"no-store"});
-    const data=await res.json();
-
-    if(!(data && data.ok && data.version==="3.3" && Array.isArray(data.records))){
-      throw new Error(data?.message || "資料格式錯誤");
+    if(!(data && data.ok && data.version==="3.4" && Array.isArray(data.records))){
+      throw new Error(data?.message || "Apps Script 版本或資料格式不正確");
     }
 
     cloudRecords=normalizeRecords(data.records);
@@ -507,7 +535,7 @@ async function loadCloud(silent=false){
     $("#syncStatus").textContent=`✓ API V${data.version}｜已同步 ${records.length} 筆共用紀錄`;
 
   }catch(err){
-    $("#syncStatus").textContent="⚠ 暫時無法讀取共用試算表";
+    $("#syncStatus").textContent="⚠ 無法讀取共用試算表：" + (err?.message || "未知錯誤");
     console.error(err);
   }
 
