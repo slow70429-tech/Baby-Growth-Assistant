@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#8fa1aa">
-<title>大福｜寶寶生長助手 V2.2</title>
+<title>大福｜寶寶生長助手 V2.3</title>
 <style>
 :root{
   --bg:#eef2f4;--panel:#fff;--ink:#263238;--muted:#73808a;--line:#d7e0e5;
@@ -46,7 +46,7 @@ svg{width:100%;height:auto;display:block}
   <section class="hero">
     <div class="age" id="ageText">大福</div>
     <h1>成長曲線</h1>
-    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards｜V2.2</div>
+    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards｜V2.3</div>
   </section>
 
   <section class="card">
@@ -91,7 +91,7 @@ svg{width:100%;height:auto;display:block}
     <div id="recordArea"></div>
   </section>
 
-  <p class="note">資料來源：WHO Child Growth Standards。V2.2 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。圖表可切換身高＋體重、身高、體重、頭圍。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
+  <p class="note">資料來源：WHO Child Growth Standards。V2.3 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。圖表可切換身高＋體重、身高、體重、頭圍。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
 </div>
 
 <script>
@@ -157,19 +157,65 @@ function previewStats(){
     return `<div class="stat"><small>${label}</small><b>${pctText(p)}</b></div>`;
   }).join("");
 }
+
+function recordKey(r){
+  return [
+    String(r.date||""),
+    r.height==null?"":Number(r.height).toFixed(2),
+    r.weight==null?"":Number(r.weight).toFixed(2),
+    r.head==null?"":Number(r.head).toFixed(2),
+    String(r.recorder||"")
+  ].join("|");
+}
+
+function mergeRecords(cloudRecords, pendingRecords){
+  const map=new Map();
+
+  [...cloudRecords,...pendingRecords].forEach(r=>{
+    if(!r || !r.date) return;
+    map.set(recordKey(r),{
+      date:String(r.date),
+      height:r.height==null?null:Number(r.height),
+      weight:r.weight==null?null:Number(r.weight),
+      head:r.head==null?null:Number(r.head),
+      recorder:r.recorder||""
+    });
+  });
+
+  return [...map.values()].sort((a,b)=>a.date.localeCompare(b.date));
+}
+
+function sameMeasurement(a,b){
+  return String(a.date||"")===String(b.date||"") &&
+    String(a.recorder||"")===String(b.recorder||"") &&
+    (a.height==null?null:Number(a.height))===(b.height==null?null:Number(b.height)) &&
+    (a.weight==null?null:Number(a.weight))===(b.weight==null?null:Number(b.weight)) &&
+    (a.head==null?null:Number(a.head))===(b.head==null?null:Number(b.head));
+}
+
 $("#saveBtn").addEventListener("click", ()=>{
   const date=$("#measureDate").value;
   const height=parseFloat($("#height").value),weight=parseFloat($("#weight").value),head=parseFloat($("#head").value);
   const recorder=$("#recorder").value;
   if(!date || (!isFinite(height)&&!isFinite(weight)&&!isFinite(head))){alert("請至少輸入一項測量數值");return}
-  if(ageMonths(date)>24){alert("V2.2 目前先支援 0–24 個月；之後可再擴充到 5 歲 / 7 歲。");return}
+  if(ageMonths(date)>24){alert("V2.3 目前先支援 0–24 個月；之後可再擴充到 5 歲 / 7 歲。");return}
 
-  const item={date,height:isFinite(height)?height:null,weight:isFinite(weight)?weight:null,head:isFinite(head)?head:null,recorder};
+  const item={
+    date,
+    height:isFinite(height)?height:null,
+    weight:isFinite(weight)?weight:null,
+    head:isFinite(head)?head:null,
+    recorder
+  };
 
-  // 立刻完成本機紀錄，不讓使用者等待雲端
-  records=records.filter(r=>r.date!==date);
-  records.push(item);
-  records.sort((a,b)=>a.date.localeCompare(b.date));
+  // 防止重複按：同一筆資料若已存在，就不再新增
+  if(records.some(r=>sameMeasurement(r,item))){
+    $("#syncStatus").textContent="✓ 這筆紀錄已存在，不重複新增";
+    return;
+  }
+
+  // 先加入本機，讓歷史紀錄立即顯示
+  records=mergeRecords(records,[item]);
   localBackup=records.slice();
   localStorage.setItem("babyGrowthDafu",JSON.stringify(localBackup));
   renderAll();
@@ -179,7 +225,7 @@ $("#saveBtn").addEventListener("click", ()=>{
   let finished=false;
   const timer=setTimeout(()=>{
     if(!finished){
-      $("#syncStatus").textContent="⚠ 雲端同步較慢，資料已先保存在本機，可稍後按「重新同步共用資料」確認";
+      $("#syncStatus").textContent="⚠ 雲端同步較慢，紀錄已保留在本機；稍後可按「重新同步共用資料」";
     }
   },1800);
 
@@ -192,15 +238,17 @@ $("#saveBtn").addEventListener("click", ()=>{
     finished=true;
     clearTimeout(timer);
     $("#syncStatus").textContent=`✓ 已送出共用資料（${recorder}）`;
-    setTimeout(()=>loadCloud(true),700);
+    // 不立刻用雲端結果覆蓋本機，避免 Apps Script 尚未寫入完成造成剛新增的紀錄消失
+    setTimeout(()=>loadCloud(true,true),1800);
   }).catch(()=>{
     finished=true;
     clearTimeout(timer);
     $("#syncStatus").textContent="⚠ 雲端同步失敗，資料已先保存在本機";
   });
 });
+
 $("#clearBtn").addEventListener("click",()=>{
-  alert("共用版為避免誤刪，目前先不開放從網頁清除雲端紀錄。若要刪除，先直接在 Google 試算表刪除該列。");
+  alert("共用版為避免誤刪，目前不開放從網頁清除雲端紀錄。若要刪除，請直接到 Google 試算表刪除該列，再按「重新同步共用資料」。");
 });
 document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click",()=>{
   document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
@@ -341,37 +389,41 @@ function renderRecords(){
     </table>
   </div>`;
 }
-async function loadCloud(silent=false){
+async function loadCloud(silent=false, preserveLocal=true){
   if(!silent) $("#syncStatus").textContent="正在同步共用資料…";
+
   try{
     const controller=new AbortController();
     const timeout=setTimeout(()=>controller.abort(),3500);
     const res=await fetch(API_URL+"?t="+Date.now(),{cache:"no-store",signal:controller.signal});
     clearTimeout(timeout);
+
     const data=await res.json();
-    if(data && data.ok && Array.isArray(data.records)){
-      records=data.records.map(r=>({
-        date:String(r.date||""),
-        height:r.height==null?null:Number(r.height),
-        weight:r.weight==null?null:Number(r.weight),
-        head:r.head==null?null:Number(r.head),
-        recorder:r.recorder||""
-      })).filter(r=>r.date);
-      records.sort((a,b)=>a.date.localeCompare(b.date));
-      localBackup=records.slice();
-      localStorage.setItem("babyGrowthDafu",JSON.stringify(localBackup));
-      $("#syncStatus").textContent=`✓ 已同步 ${records.length} 筆共用紀錄`;
-    }else{
-      throw new Error("invalid data");
-    }
+    if(!(data && data.ok && Array.isArray(data.records))) throw new Error("invalid data");
+
+    const cloud=data.records.map(r=>({
+      date:String(r.date||""),
+      height:r.height==null?null:Number(r.height),
+      weight:r.weight==null?null:Number(r.weight),
+      head:r.head==null?null:Number(r.head),
+      recorder:r.recorder||""
+    })).filter(r=>r.date);
+
+    // V2.3 關鍵：雲端資料與本機資料合併，不再用雲端空資料直接覆蓋剛新增的紀錄
+    records = preserveLocal ? mergeRecords(cloud, localBackup) : mergeRecords(cloud, []);
+    localBackup=records.slice();
+    localStorage.setItem("babyGrowthDafu",JSON.stringify(localBackup));
+
+    $("#syncStatus").textContent=`✓ 已同步 ${cloud.length} 筆雲端紀錄，目前顯示 ${records.length} 筆`;
   }catch(err){
     records=localBackup.slice();
     $("#syncStatus").textContent="⚠ 暫時無法讀取雲端，先顯示這台裝置的備份";
   }
+
   renderAll();
 }
 
-$("#syncBtn").addEventListener("click",()=>loadCloud(false));
+$("#syncBtn").addEventListener("click",()=>loadCloud(false,true));
 
 function renderAll(){updateAge();previewStats();drawChart();renderRecords()}
 renderAll();
