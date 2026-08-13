@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#8fa1aa">
-<title>大福｜寶寶生長助手 V2.7</title>
+<title>大福｜寶寶生長助手 V2.9</title>
 <style>
 :root{
   --bg:#eef2f4;--panel:#fff;--ink:#263238;--muted:#73808a;--line:#d7e0e5;
@@ -46,7 +46,7 @@ svg{width:100%;height:auto;display:block}
   <section class="hero">
     <div class="age" id="ageText">大福</div>
     <h1>成長曲線</h1>
-    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards｜V2.7</div>
+    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards｜V2.9</div>
   </section>
 
   <section class="card">
@@ -96,7 +96,7 @@ svg{width:100%;height:auto;display:block}
   </section>
 
 
-  <p class="note">資料來源：WHO Child Growth Standards。V2.7 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。圖表可切換身高＋體重、身高、體重、頭圍。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
+  <p class="note">資料來源：WHO Child Growth Standards。V2.9 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。圖表可切換身高＋體重、身高、體重、頭圍。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
 </div>
 
 <script>
@@ -109,7 +109,7 @@ let records=[];
 let cloudRecords=[];
 let pendingRecords=JSON.parse(localStorage.getItem("babyGrowthPending")||"[]");
 
-// V2.7 起 Google 試算表為正式歷史紀錄來源。
+// V2.9 起 Google 試算表為正式歷史紀錄來源。
 // 舊版 babyGrowthDafu 只當快取，不再拿來覆蓋雲端刪除結果。
 localStorage.removeItem("babyGrowthDafu");
 
@@ -216,7 +216,7 @@ $("#saveBtn").addEventListener("click", ()=>{
   const height=parseFloat($("#height").value),weight=parseFloat($("#weight").value),head=parseFloat($("#head").value);
   const recorder=$("#recorder").value;
   if(!date || (!isFinite(height)&&!isFinite(weight)&&!isFinite(head))){alert("請至少輸入一項測量數值");return}
-  if(ageMonths(date)>24){alert("V2.7 目前先支援 0–24 個月；之後可再擴充到 5 歲 / 7 歲。");return}
+  if(ageMonths(date)>24){alert("V2.9 目前先支援 0–24 個月；之後可再擴充到 5 歲 / 7 歲。");return}
 
   const item={
     date,
@@ -283,7 +283,7 @@ $("#clearPendingBtn").addEventListener("click",()=>{
 });
 
 $("#clearBtn").addEventListener("click",()=>{
-  alert("V2.7 的正式歷史紀錄以 Google 試算表為準。若要刪除某筆資料，請直接在 Google 試算表刪除該列，再回網頁按「重新同步共用資料」。");
+  alert("V2.9 的正式歷史紀錄以 Google 試算表為準。若要刪除某筆資料，請直接在 Google 試算表刪除該列，再回網頁按「重新同步共用資料」。");
 });
 document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click",()=>{
   document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
@@ -412,6 +412,7 @@ function renderRecords(){
       <td>${r.weight??"—"}</td><td class="pr">${pctText(wp)}</td>
       <td>${r.head??"—"}</td><td class="pr">${pctText(cp)}</td>
       <td>${r.recorder||"—"}</td>
+      <td><button class="danger deleteRowBtn" data-key="${encodeURIComponent(recordKey(r))}" style="font-size:13px;padding:6px 9px">刪除</button></td>
     </tr>`;
   }).join("");
 
@@ -426,11 +427,69 @@ function renderRecords(){
         <th>身高</th><th>身高PR</th>
         <th>體重</th><th>體重PR</th>
         <th>頭圍</th><th>頭圍PR</th>
-        <th>紀錄者</th>
+        <th>紀錄者</th><th>操作</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
   </div>`;
+
+  area.querySelectorAll(".deleteRowBtn").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const key=decodeURIComponent(btn.dataset.key||"");
+      const target=records.find(r=>recordKey(r)===key);
+      if(!target) return;
+
+      const detail=[
+        target.date ? target.date.replaceAll("-","/") : "",
+        target.height!=null ? `身高 ${target.height} cm` : "",
+        target.weight!=null ? `體重 ${target.weight} kg` : "",
+        target.head!=null ? `頭圍 ${target.head} cm` : "",
+        target.recorder ? `紀錄者 ${target.recorder}` : ""
+      ].filter(Boolean).join("\n");
+
+      if(!confirm(`確定要刪除這筆紀錄嗎？\n\n${detail}\n\n刪除後會同步從共用 Google 試算表移除。`)) return;
+
+      btn.disabled=true;
+      btn.textContent="刪除中…";
+      $("#syncStatus").textContent="正在刪除共用紀錄…";
+
+      // 如果只是本機待同步，直接刪除，不需打雲端 API
+      const isPending=pendingRecords.some(p=>sameMeasurement(p,target));
+      if(isPending){
+        pendingRecords=pendingRecords.filter(p=>!sameMeasurement(p,target));
+        localStorage.setItem("babyGrowthPending",JSON.stringify(pendingRecords));
+        records=mergeRecords(cloudRecords,pendingRecords);
+        $("#syncStatus").textContent="✓ 已刪除本機待同步紀錄";
+        renderAll();
+        return;
+      }
+
+      try{
+        await fetch(API_URL,{
+          method:"POST",
+          mode:"no-cors",
+          headers:{"Content-Type":"text/plain;charset=utf-8"},
+          body:JSON.stringify({
+            action:"delete",
+            date:target.date,
+            height:target.height,
+            weight:target.weight,
+            head:target.head,
+            recorder:target.recorder
+          })
+        });
+
+        // no-cors 無法直接讀回傳，所以稍等 Apps Script 寫入完成再重抓
+        $("#syncStatus").textContent="✓ 已送出刪除要求，正在重新同步…";
+        setTimeout(()=>loadCloud(false),1200);
+
+      }catch(err){
+        btn.disabled=false;
+        btn.textContent="刪除";
+        $("#syncStatus").textContent="⚠ 刪除失敗，請稍後再試";
+      }
+    });
+  });
 }
 async function loadCloud(silent=false){
   if(!silent) $("#syncStatus").textContent="正在同步共用資料…";
