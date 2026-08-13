@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#8fa1aa">
-<title>大福｜寶寶生長助手 V3.1</title>
+<title>大福｜寶寶生長助手 V3.3</title>
 <style>
 :root{
   --bg:#eef2f4;--panel:#fff;--ink:#263238;--muted:#73808a;--line:#d7e0e5;
@@ -46,7 +46,7 @@ svg{width:100%;height:auto;display:block}
   <section class="hero">
     <div class="age" id="ageText">大福</div>
     <h1>成長曲線</h1>
-    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards｜V3.1</div>
+    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards｜V3.3</div>
   </section>
 
   <section class="card">
@@ -61,7 +61,7 @@ svg{width:100%;height:auto;display:block}
       </select></div>
     </div>
     <button class="primary" id="saveBtn">加入這次紀錄</button>
-    <div class="note" style="margin-top:6px;text-align:center">新增成功後會自動清空身高、體重、頭圍；「加入這次紀錄」會立刻恢復，可連續輸入下一筆。</div>
+    <div class="note" style="margin-top:6px;text-align:center">V3.3 直接寫入 Google 試算表並等待成功回應；成功後會清空身高、體重、頭圍，可立即輸入下一筆。</div>
     <button class="secondary" id="syncBtn" type="button" style="width:100%;margin-top:8px">重新同步共用資料</button>
     <div id="syncStatus" class="note" style="margin-top:8px;text-align:center" aria-live="polite">正在同步共用資料…</div>
     <div class="stats" id="stats">
@@ -76,7 +76,6 @@ svg{width:100%;height:auto;display:block}
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
       <h2 style="font-size:18px;margin:0">歷次紀錄</h2>
       <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-        <button id="clearPendingBtn" class="danger" style="font-size:14px;padding:8px 10px">清除本機待同步</button>
         <button id="clearBtn" class="secondary" style="font-size:14px;padding:8px 10px">刪除說明</button>
       </div>
     </div>
@@ -96,7 +95,7 @@ svg{width:100%;height:auto;display:block}
   </section>
 
 
-  <p class="note">資料來源：WHO Child Growth Standards。V3.1 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。圖表可切換身高＋體重、身高、體重、頭圍。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
+  <p class="note">資料來源：WHO Child Growth Standards。V3.3 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。圖表可切換身高＋體重、身高、體重、頭圍。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
 </div>
 
 <script>
@@ -107,11 +106,9 @@ const PCTS=["P3","P15","P50","P85","P97"];
 let view="hw";
 let records=[];
 let cloudRecords=[];
-let pendingRecords=JSON.parse(localStorage.getItem("babyGrowthPending")||"[]");
 
-// V3.1 起 Google 試算表為正式歷史紀錄來源。
-// 舊版 babyGrowthDafu 只當快取，不再拿來覆蓋雲端刪除結果。
-localStorage.removeItem("babyGrowthDafu");
+// V3.3：Google 試算表是唯一正式資料來源。
+// 新增 / 刪除都直接等待 Apps Script 回傳最新 records，不再靠 no-cors POST。
 
 const $=s=>document.querySelector(s);
 const svg=$("#chart");
@@ -212,36 +209,22 @@ function sameMeasurement(a,b){
 }
 
 
-function sleep(ms){
-  return new Promise(resolve=>setTimeout(resolve,ms));
-}
-
-async function autoSyncUntil(target, shouldExist){
-  const delays=[900,1400,2000,2800,3800];
-
-  for(let i=0;i<delays.length;i++){
-    await sleep(delays[i]);
-    await loadCloud(true);
-
-    const exists=cloudRecords.some(r=>sameMeasurement(r,target));
-    if(exists===shouldExist){
-      $("#syncStatus").textContent=shouldExist
-        ? "✓ 已自動同步共用資料"
-        : "✓ 已刪除並自動同步";
-      return true;
-    }
-  }
-
-  $("#syncStatus").textContent="⚠ 雲端處理較慢，可按「重新同步共用資料」再次確認";
-  return false;
-}
-
 $("#saveBtn").addEventListener("click", async ()=>{
   const date=$("#measureDate").value;
-  const height=parseFloat($("#height").value),weight=parseFloat($("#weight").value),head=parseFloat($("#head").value);
+  const height=parseFloat($("#height").value);
+  const weight=parseFloat($("#weight").value);
+  const head=parseFloat($("#head").value);
   const recorder=$("#recorder").value;
-  if(!date || (!isFinite(height)&&!isFinite(weight)&&!isFinite(head))){alert("請至少輸入一項測量數值");return}
-  if(ageMonths(date)>24){alert("V3.1 目前先支援 0–24 個月；之後可再擴充到 5 歲 / 7 歲。");return}
+
+  if(!date || (!isFinite(height)&&!isFinite(weight)&&!isFinite(head))){
+    alert("請至少輸入一項測量數值");
+    return;
+  }
+
+  if(ageMonths(date)>24){
+    alert("V3.3 目前先支援 0–24 個月；之後可再擴充到 5 歲 / 7 歲。");
+    return;
+  }
 
   const item={
     date,
@@ -251,56 +234,48 @@ $("#saveBtn").addEventListener("click", async ()=>{
     recorder
   };
 
-  // 先放進「待同步」佇列，歷史紀錄立即顯示。
-  // 正式歷史仍以 Google 試算表為準。
-  pendingRecords=mergeRecords(pendingRecords,[item]);
-  localStorage.setItem("babyGrowthPending",JSON.stringify(pendingRecords));
-  records=mergeRecords(cloudRecords,pendingRecords);
-  renderAll();
-  clearMeasurementInputs();
-
-  $("#syncStatus").textContent=`✓ 已加入紀錄，正在背景同步（${recorder}）`;
-
   const saveBtn=$("#saveBtn");
   saveBtn.disabled=true;
-  saveBtn.textContent="送出中…";
+  saveBtn.textContent="新增中…";
+  $("#syncStatus").textContent="正在寫入共用試算表…";
 
   try{
-    await fetch(API_URL,{
-      method:"POST",
-      mode:"no-cors",
-      headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body:JSON.stringify(item)
-    });
+    const url=new URL(API_URL);
+    url.searchParams.set("action","add");
+    url.searchParams.set("date",item.date);
+    url.searchParams.set("height",item.height==null?"":String(item.height));
+    url.searchParams.set("weight",item.weight==null?"":String(item.weight));
+    url.searchParams.set("head",item.head==null?"":String(item.head));
+    url.searchParams.set("recorder",item.recorder);
+    url.searchParams.set("_",String(Date.now()));
 
-    $("#syncStatus").textContent=`✓ 已送出共用資料（${recorder}），正在自動確認…`;
-    autoSyncUntil(item,true);
+    const res=await fetch(url.toString(),{cache:"no-store"});
+    const data=await res.json();
+
+    if(!data || !data.ok) throw new Error(data?.message || "新增失敗");
+    if(data.version!=="3.3") throw new Error("Apps Script 尚未更新到 V3.3");
+
+    cloudRecords=normalizeRecords(data.records||[]);
+    records=cloudRecords.slice();
+
+    $("#syncStatus").textContent=data.duplicate
+      ? "ℹ 相同紀錄已存在，未重複新增"
+      : `✓ 新增成功，目前共 ${records.length} 筆`;
+
+    renderAll();
+    clearMeasurementInputs();
+
   }catch(err){
-    $("#syncStatus").textContent="⚠ 雲端同步失敗，資料已先保存在本機";
+    $("#syncStatus").textContent="⚠ 新增失敗，請按「重新同步共用資料」後再試";
+    console.error(err);
   }finally{
-    // 關鍵修正：每次送出後都恢復按鈕，下一筆可立即繼續輸入
     saveBtn.disabled=false;
     saveBtn.textContent="加入這次紀錄";
   }
 });
 
-$("#clearPendingBtn").addEventListener("click",()=>{
-  if(!pendingRecords.length){
-    alert("目前沒有本機待同步紀錄。");
-    return;
-  }
-
-  if(confirm(`目前有 ${pendingRecords.length} 筆本機待同步紀錄（日期旁會顯示 ⏳）。\n\n確定全部清除嗎？\n\n這不會刪除 Google 試算表裡已經同步完成的資料。`)){
-    pendingRecords=[];
-    localStorage.removeItem("babyGrowthPending");
-    records=mergeRecords(cloudRecords,[]);
-    $("#syncStatus").textContent="✓ 已清除本機待同步紀錄";
-    renderAll();
-  }
-});
-
 $("#clearBtn").addEventListener("click",()=>{
-  alert("V3.1 的正式歷史紀錄以 Google 試算表為準。若要刪除某筆資料，請直接在 Google 試算表刪除該列，再回網頁按「重新同步共用資料」。");
+  alert("V3.3 每筆歷史紀錄後方都有刪除鍵；刪除確認後會直接同步移除 Google 試算表資料。");
 });
 document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click",()=>{
   document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
@@ -420,10 +395,9 @@ function renderRecords(){
     const hp=r.height==null?null:percentile("height",m,Number(r.height));
     const wp=r.weight==null?null:percentile("weight",m,Number(r.weight));
     const cp=r.head==null?null:percentile("head",m,Number(r.head));
-    const pending=pendingRecords.some(p=>sameMeasurement(p,r));
 
     return `<tr>
-      <td>${date.replaceAll("-","/")}${pending?' <span title="等待雲端確認">⏳</span>':''}</td>
+      <td>${date.replaceAll("-","/")}</td>
       <td>${ageLabel(date).replace(" 個月 ","月").replace(" 天","天")}</td>
       <td>${r.height??"—"}</td><td class="pr">${pctText(hp)}</td>
       <td>${r.weight??"—"}</td><td class="pr">${pctText(wp)}</td>
@@ -435,7 +409,7 @@ function renderRecords(){
 
   area.innerHTML=`<div class="note" style="margin:8px 0 6px">
       目前共 ${valid.length} 筆紀錄
-      ${pendingRecords.length ? `｜其中 ${pendingRecords.length} 筆為本機待同步（⏳），尚未存在 Google 試算表` : ""}
+      
     </div>
     <div class="tablewrap">
     <table class="records">
@@ -464,88 +438,77 @@ function renderRecords(){
         target.recorder ? `紀錄者 ${target.recorder}` : ""
       ].filter(Boolean).join("\n");
 
-      if(!confirm(`確定要刪除這筆紀錄嗎？\n\n${detail}\n\n刪除後會同步從共用 Google 試算表移除。`)) return;
+      if(!confirm(`確定要刪除這筆紀錄嗎？\n\n${detail}\n\n刪除後會同步從 Google 試算表移除。`)) return;
 
       btn.disabled=true;
       btn.textContent="刪除中…";
       $("#syncStatus").textContent="正在刪除共用紀錄…";
 
-      // 如果只是本機待同步，直接刪除，不需打雲端 API
-      const isPending=pendingRecords.some(p=>sameMeasurement(p,target));
-      if(isPending){
-        pendingRecords=pendingRecords.filter(p=>!sameMeasurement(p,target));
-        localStorage.setItem("babyGrowthPending",JSON.stringify(pendingRecords));
-        records=mergeRecords(cloudRecords,pendingRecords);
-        $("#syncStatus").textContent="✓ 已刪除本機待同步紀錄";
-        renderAll();
-        return;
-      }
-
       try{
-        await fetch(API_URL,{
-          method:"POST",
-          mode:"no-cors",
-          headers:{"Content-Type":"text/plain;charset=utf-8"},
-          body:JSON.stringify({
-            action:"delete",
-            date:target.date,
-            height:target.height,
-            weight:target.weight,
-            head:target.head,
-            recorder:target.recorder
-          })
-        });
+        const url=new URL(API_URL);
+        url.searchParams.set("action","delete");
+        url.searchParams.set("date",target.date);
+        url.searchParams.set("height",target.height==null?"":String(target.height));
+        url.searchParams.set("weight",target.weight==null?"":String(target.weight));
+        url.searchParams.set("head",target.head==null?"":String(target.head));
+        url.searchParams.set("recorder",target.recorder||"");
+        url.searchParams.set("_",String(Date.now()));
 
-        // no-cors 無法直接讀回傳，因此自動輪詢直到雲端確實刪除
-        $("#syncStatus").textContent="✓ 已送出刪除要求，正在自動確認…";
-        autoSyncUntil(target,false);
+        const res=await fetch(url.toString(),{cache:"no-store"});
+        const data=await res.json();
+
+        if(!data || !data.ok) throw new Error(data?.message || "刪除失敗");
+        if(data.version!=="3.3") throw new Error("Apps Script 尚未更新到 V3.3");
+
+        cloudRecords=normalizeRecords(data.records||[]);
+        records=cloudRecords.slice();
+
+        $("#syncStatus").textContent=`✓ 刪除成功，目前共 ${records.length} 筆`;
+        renderAll();
 
       }catch(err){
         btn.disabled=false;
         btn.textContent="刪除";
-        $("#syncStatus").textContent="⚠ 刪除失敗，請稍後再試";
+        $("#syncStatus").textContent="⚠ 刪除失敗，請重新同步後再試";
+        console.error(err);
       }
     });
   });
 }
+
+function normalizeRecords(list){
+  return (list||[]).map(r=>({
+    date:String(r.date||""),
+    height:r.height==null?null:Number(r.height),
+    weight:r.weight==null?null:Number(r.weight),
+    head:r.head==null?null:Number(r.head),
+    recorder:r.recorder||""
+  })).filter(r=>r.date).sort((a,b)=>a.date.localeCompare(b.date));
+}
+
 async function loadCloud(silent=false){
   if(!silent) $("#syncStatus").textContent="正在同步共用資料…";
 
   try{
-    const controller=new AbortController();
-    const timeout=setTimeout(()=>controller.abort(),4000);
-    const res=await fetch(API_URL+"?t="+Date.now(),{cache:"no-store",signal:controller.signal});
-    clearTimeout(timeout);
+    const url=new URL(API_URL);
+    url.searchParams.set("action","list");
+    url.searchParams.set("_",String(Date.now()));
 
+    const res=await fetch(url.toString(),{cache:"no-store"});
     const data=await res.json();
-    if(!(data && data.ok && Array.isArray(data.records))) throw new Error("invalid data");
 
-    cloudRecords=data.records.map(r=>({
-      date:String(r.date||""),
-      height:r.height==null?null:Number(r.height),
-      weight:r.weight==null?null:Number(r.weight),
-      head:r.head==null?null:Number(r.head),
-      recorder:r.recorder||""
-    })).filter(r=>r.date);
+    if(!(data && data.ok && data.version==="3.3" && Array.isArray(data.records))){
+      throw new Error(data?.message || "資料格式錯誤");
+    }
 
-    // 已經出現在雲端的待同步資料，從 pending 移除。
-    pendingRecords=pendingRecords.filter(p=>!cloudRecords.some(c=>sameMeasurement(c,p)));
-    localStorage.setItem("babyGrowthPending",JSON.stringify(pendingRecords));
+    cloudRecords=normalizeRecords(data.records);
+    records=cloudRecords.slice();
 
-    // 雲端正式紀錄 + 尚未被雲端確認的新紀錄
-    records=mergeRecords(cloudRecords,pendingRecords);
+    $("#syncStatus").textContent=`✓ API V${data.version}｜已同步 ${records.length} 筆共用紀錄`;
 
-    $("#syncStatus").textContent=
-      pendingRecords.length
-        ? `⚠ 雲端 ${cloudRecords.length} 筆；本機另有 ${pendingRecords.length} 筆尚未同步（⏳）`
-        : `✓ 已同步 ${cloudRecords.length} 筆共用紀錄`;
   }catch(err){
-    // 無法讀雲端時只顯示真正尚未同步的資料，不把舊快取冒充歷史紀錄
-    records=mergeRecords(cloudRecords,pendingRecords);
-    $("#syncStatus").textContent=
-      pendingRecords.length
-        ? `⚠ 暫時無法讀取雲端，${pendingRecords.length} 筆新紀錄仍保留待同步`
-        : "⚠ 暫時無法讀取雲端";
+    $("#syncStatus").textContent="⚠ 暫時無法讀取共用試算表";
+    console.error(err);
   }
 
   renderAll();
