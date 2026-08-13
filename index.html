@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#8fa1aa">
-<title>大福｜寶寶生長助手 V2.6</title>
+<title>大福｜寶寶生長助手 V2.7</title>
 <style>
 :root{
   --bg:#eef2f4;--panel:#fff;--ink:#263238;--muted:#73808a;--line:#d7e0e5;
@@ -46,7 +46,7 @@ svg{width:100%;height:auto;display:block}
   <section class="hero">
     <div class="age" id="ageText">大福</div>
     <h1>成長曲線</h1>
-    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards｜V2.6</div>
+    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards｜V2.7</div>
   </section>
 
   <section class="card">
@@ -75,7 +75,10 @@ svg{width:100%;height:auto;display:block}
   <section class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
       <h2 style="font-size:18px;margin:0">歷次紀錄</h2>
-      <button id="clearBtn" class="secondary" style="font-size:14px;padding:8px 10px">刪除說明</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+        <button id="clearPendingBtn" class="danger" style="font-size:14px;padding:8px 10px">清除本機待同步</button>
+        <button id="clearBtn" class="secondary" style="font-size:14px;padding:8px 10px">刪除說明</button>
+      </div>
     </div>
     <div id="recordArea"></div>
   </section>
@@ -93,7 +96,7 @@ svg{width:100%;height:auto;display:block}
   </section>
 
 
-  <p class="note">資料來源：WHO Child Growth Standards。V2.6 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。圖表可切換身高＋體重、身高、體重、頭圍。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
+  <p class="note">資料來源：WHO Child Growth Standards。V2.7 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。圖表可切換身高＋體重、身高、體重、頭圍。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
 </div>
 
 <script>
@@ -106,7 +109,7 @@ let records=[];
 let cloudRecords=[];
 let pendingRecords=JSON.parse(localStorage.getItem("babyGrowthPending")||"[]");
 
-// V2.6 起 Google 試算表為正式歷史紀錄來源。
+// V2.7 起 Google 試算表為正式歷史紀錄來源。
 // 舊版 babyGrowthDafu 只當快取，不再拿來覆蓋雲端刪除結果。
 localStorage.removeItem("babyGrowthDafu");
 
@@ -213,7 +216,7 @@ $("#saveBtn").addEventListener("click", ()=>{
   const height=parseFloat($("#height").value),weight=parseFloat($("#weight").value),head=parseFloat($("#head").value);
   const recorder=$("#recorder").value;
   if(!date || (!isFinite(height)&&!isFinite(weight)&&!isFinite(head))){alert("請至少輸入一項測量數值");return}
-  if(ageMonths(date)>24){alert("V2.6 目前先支援 0–24 個月；之後可再擴充到 5 歲 / 7 歲。");return}
+  if(ageMonths(date)>24){alert("V2.7 目前先支援 0–24 個月；之後可再擴充到 5 歲 / 7 歲。");return}
 
   const item={
     date,
@@ -264,8 +267,23 @@ $("#saveBtn").addEventListener("click", ()=>{
   });
 });
 
+$("#clearPendingBtn").addEventListener("click",()=>{
+  if(!pendingRecords.length){
+    alert("目前沒有本機待同步紀錄。");
+    return;
+  }
+
+  if(confirm(`目前有 ${pendingRecords.length} 筆本機待同步紀錄（日期旁會顯示 ⏳）。\n\n確定全部清除嗎？\n\n這不會刪除 Google 試算表裡已經同步完成的資料。`)){
+    pendingRecords=[];
+    localStorage.removeItem("babyGrowthPending");
+    records=mergeRecords(cloudRecords,[]);
+    $("#syncStatus").textContent="✓ 已清除本機待同步紀錄";
+    renderAll();
+  }
+});
+
 $("#clearBtn").addEventListener("click",()=>{
-  alert("V2.6 的正式歷史紀錄以 Google 試算表為準。若要刪除某筆資料，請直接在 Google 試算表刪除該列，再回網頁按「重新同步共用資料」。");
+  alert("V2.7 的正式歷史紀錄以 Google 試算表為準。若要刪除某筆資料，請直接在 Google 試算表刪除該列，再回網頁按「重新同步共用資料」。");
 });
 document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click",()=>{
   document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
@@ -397,7 +415,10 @@ function renderRecords(){
     </tr>`;
   }).join("");
 
-  area.innerHTML=`<div class="note" style="margin:8px 0 6px">目前共 ${valid.length} 筆紀錄</div>
+  area.innerHTML=`<div class="note" style="margin:8px 0 6px">
+      目前共 ${valid.length} 筆紀錄
+      ${pendingRecords.length ? `｜其中 ${pendingRecords.length} 筆為本機待同步（⏳），尚未存在 Google 試算表` : ""}
+    </div>
     <div class="tablewrap">
     <table class="records">
       <thead><tr>
@@ -440,7 +461,7 @@ async function loadCloud(silent=false){
 
     $("#syncStatus").textContent=
       pendingRecords.length
-        ? `✓ 雲端 ${cloudRecords.length} 筆，另有 ${pendingRecords.length} 筆等待確認`
+        ? `⚠ 雲端 ${cloudRecords.length} 筆；本機另有 ${pendingRecords.length} 筆尚未同步（⏳）`
         : `✓ 已同步 ${cloudRecords.length} 筆共用紀錄`;
   }catch(err){
     // 無法讀雲端時只顯示真正尚未同步的資料，不把舊快取冒充歷史紀錄
