@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#8fa1aa">
-<title>大福｜寶寶生長助手 V3.0</title>
+<title>大福｜寶寶生長助手 V3.1</title>
 <style>
 :root{
   --bg:#eef2f4;--panel:#fff;--ink:#263238;--muted:#73808a;--line:#d7e0e5;
@@ -46,7 +46,7 @@ svg{width:100%;height:auto;display:block}
   <section class="hero">
     <div class="age" id="ageText">大福</div>
     <h1>成長曲線</h1>
-    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards｜V3.0</div>
+    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards｜V3.1</div>
   </section>
 
   <section class="card">
@@ -61,7 +61,7 @@ svg{width:100%;height:auto;display:block}
       </select></div>
     </div>
     <button class="primary" id="saveBtn">加入這次紀錄</button>
-    <div class="note" style="margin-top:6px;text-align:center">新增成功後會自動清空身高、體重、頭圍，並自動同步共用資料。</div>
+    <div class="note" style="margin-top:6px;text-align:center">新增成功後會自動清空身高、體重、頭圍；「加入這次紀錄」會立刻恢復，可連續輸入下一筆。</div>
     <button class="secondary" id="syncBtn" type="button" style="width:100%;margin-top:8px">重新同步共用資料</button>
     <div id="syncStatus" class="note" style="margin-top:8px;text-align:center" aria-live="polite">正在同步共用資料…</div>
     <div class="stats" id="stats">
@@ -96,7 +96,7 @@ svg{width:100%;height:auto;display:block}
   </section>
 
 
-  <p class="note">資料來源：WHO Child Growth Standards。V3.0 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。圖表可切換身高＋體重、身高、體重、頭圍。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
+  <p class="note">資料來源：WHO Child Growth Standards。V3.1 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。圖表可切換身高＋體重、身高、體重、頭圍。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
 </div>
 
 <script>
@@ -109,7 +109,7 @@ let records=[];
 let cloudRecords=[];
 let pendingRecords=JSON.parse(localStorage.getItem("babyGrowthPending")||"[]");
 
-// V3.0 起 Google 試算表為正式歷史紀錄來源。
+// V3.1 起 Google 試算表為正式歷史紀錄來源。
 // 舊版 babyGrowthDafu 只當快取，不再拿來覆蓋雲端刪除結果。
 localStorage.removeItem("babyGrowthDafu");
 
@@ -236,12 +236,12 @@ async function autoSyncUntil(target, shouldExist){
   return false;
 }
 
-$("#saveBtn").addEventListener("click", ()=>{
+$("#saveBtn").addEventListener("click", async ()=>{
   const date=$("#measureDate").value;
   const height=parseFloat($("#height").value),weight=parseFloat($("#weight").value),head=parseFloat($("#head").value);
   const recorder=$("#recorder").value;
   if(!date || (!isFinite(height)&&!isFinite(weight)&&!isFinite(head))){alert("請至少輸入一項測量數值");return}
-  if(ageMonths(date)>24){alert("V3.0 目前先支援 0–24 個月；之後可再擴充到 5 歲 / 7 歲。");return}
+  if(ageMonths(date)>24){alert("V3.1 目前先支援 0–24 個月；之後可再擴充到 5 歲 / 7 歲。");return}
 
   const item={
     date,
@@ -250,13 +250,6 @@ $("#saveBtn").addEventListener("click", ()=>{
     head:isFinite(head)?head:null,
     recorder
   };
-
-  // 防止同一筆資料重複送出，但要讓使用者知道按鈕沒有失效
-  if(records.some(r=>sameMeasurement(r,item))){
-    $("#syncStatus").textContent="ℹ 這筆資料已經存在；請修改日期或數值後再新增。";
-    clearMeasurementInputs();
-    return;
-  }
 
   // 先放進「待同步」佇列，歷史紀錄立即顯示。
   // 正式歷史仍以 Google 試算表為準。
@@ -268,28 +261,27 @@ $("#saveBtn").addEventListener("click", ()=>{
 
   $("#syncStatus").textContent=`✓ 已加入紀錄，正在背景同步（${recorder}）`;
 
-  let finished=false;
-  const timer=setTimeout(()=>{
-    if(!finished){
-      $("#syncStatus").textContent="⚠ 雲端同步較慢，紀錄已保留在本機；稍後可按「重新同步共用資料」";
-    }
-  },1800);
+  const saveBtn=$("#saveBtn");
+  saveBtn.disabled=true;
+  saveBtn.textContent="送出中…";
 
-  fetch(API_URL,{
-    method:"POST",
-    mode:"no-cors",
-    headers:{"Content-Type":"text/plain;charset=utf-8"},
-    body:JSON.stringify(item)
-  }).then(()=>{
-    finished=true;
-    clearTimeout(timer);
+  try{
+    await fetch(API_URL,{
+      method:"POST",
+      mode:"no-cors",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify(item)
+    });
+
     $("#syncStatus").textContent=`✓ 已送出共用資料（${recorder}），正在自動確認…`;
     autoSyncUntil(item,true);
-  }).catch(()=>{
-    finished=true;
-    clearTimeout(timer);
+  }catch(err){
     $("#syncStatus").textContent="⚠ 雲端同步失敗，資料已先保存在本機";
-  });
+  }finally{
+    // 關鍵修正：每次送出後都恢復按鈕，下一筆可立即繼續輸入
+    saveBtn.disabled=false;
+    saveBtn.textContent="加入這次紀錄";
+  }
 });
 
 $("#clearPendingBtn").addEventListener("click",()=>{
@@ -308,7 +300,7 @@ $("#clearPendingBtn").addEventListener("click",()=>{
 });
 
 $("#clearBtn").addEventListener("click",()=>{
-  alert("V3.0 的正式歷史紀錄以 Google 試算表為準。若要刪除某筆資料，請直接在 Google 試算表刪除該列，再回網頁按「重新同步共用資料」。");
+  alert("V3.1 的正式歷史紀錄以 Google 試算表為準。若要刪除某筆資料，請直接在 Google 試算表刪除該列，再回網頁按「重新同步共用資料」。");
 });
 document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click",()=>{
   document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
