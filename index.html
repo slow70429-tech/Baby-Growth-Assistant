@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#8fa1aa">
-<title>大福｜寶寶生長助手 V3.7</title>
+<title>大福｜寶寶生長助手 V3.8</title>
 <style>
 :root{
   --bg:#eef2f4;--panel:#fff;--ink:#263238;--muted:#73808a;--line:#d7e0e5;
@@ -39,17 +39,6 @@ svg{width:100%;height:auto;display:block}
 .records th{color:#68747d;font-weight:600}.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}.pr{font-weight:700;color:#52636c}
 .note{font-size:12px;color:#7a8790;line-height:1.55}
 .empty{text-align:center;color:#8a969d;padding:18px 0}
-.history-list{display:grid;gap:10px;margin-top:10px}
-.history-item{border:1px solid #e1e7ea;border-radius:14px;padding:12px;background:#fbfcfd}
-.history-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
-.history-date{font-weight:700;font-size:16px}
-.history-age{font-size:13px;color:#73808a;margin-top:2px}
-.history-values{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
-.history-value{background:#f3f6f7;border-radius:10px;padding:8px;text-align:center}
-.history-value small{display:block;color:#73808a;font-size:12px}
-.history-value b{display:block;font-size:16px;margin-top:2px}
-.history-pr{font-size:12px;color:#52636c;margin-top:2px;font-weight:700}
-@media(max-width:420px){.history-values{grid-template-columns:1fr}.history-value{text-align:left}}
 </style>
 </head>
 <body>
@@ -57,7 +46,7 @@ svg{width:100%;height:auto;display:block}
   <section class="hero">
     <div class="age" id="ageText">大福</div>
     <h1>成長曲線</h1>
-    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards｜V3.7</div>
+    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards｜V3.8</div>
   </section>
 
   <section class="card">
@@ -72,7 +61,7 @@ svg{width:100%;height:auto;display:block}
       </select></div>
     </div>
     <button class="primary" id="saveBtn">加入這次紀錄</button>
-    <div class="note" style="margin-top:6px;text-align:center">V3.7 歷次紀錄改為獨立顯示，直接使用 Google 試算表回傳資料。</div>
+    <div class="note" style="margin-top:6px;text-align:center">V3.8 修正 Google 試算表日期格式；歷次紀錄與圖表使用同一份資料。</div>
     <button class="secondary" id="syncBtn" type="button" style="width:100%;margin-top:8px">重新同步共用資料</button>
     <div id="syncStatus" class="note" style="margin-top:8px;text-align:center" aria-live="polite">正在同步共用資料…</div>
     <div class="stats" id="stats">
@@ -106,7 +95,7 @@ svg{width:100%;height:auto;display:block}
   </section>
 
 
-  <p class="note">資料來源：WHO Child Growth Standards。V3.7 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。圖表可切換身高＋體重、身高、體重、頭圍。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
+  <p class="note">資料來源：WHO Child Growth Standards。V3.8 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。圖表可切換身高＋體重、身高、體重、頭圍。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
 </div>
 
 <script>
@@ -118,7 +107,7 @@ let view="hw";
 let records=[];
 let cloudRecords=[];
 
-// V3.7：Google 試算表是唯一正式資料來源。
+// V3.8：Google 試算表是唯一正式資料來源。
 // 新增 / 刪除都直接等待 Apps Script 回傳最新 records，不再靠 no-cors POST。
 
 const $=s=>document.querySelector(s);
@@ -140,23 +129,18 @@ function interp(type,m){
   const arr=DATA[type];
   if(!Array.isArray(arr) || !arr.length) return null;
 
-  const maxIndex=arr.length-1;
-  const mm=Math.min(maxIndex,Math.max(0,Number(m)||0));
-  const i=Math.min(maxIndex,Math.floor(mm));
-  const j=Math.min(maxIndex,i+1);
+  const n=Number(m);
+  const mm=Math.min(arr.length-1,Math.max(0,Number.isFinite(n)?n:0));
+  const i=Math.floor(mm);
+  const j=Math.min(arr.length-1,i+1);
   const t=mm-i;
-
-  const a=arr[i];
-  const b=arr[j] || a;
+  const a=arr[i], b=arr[j]||a;
   if(!a) return null;
 
   const o={};
   ["L","M","S",...PCTS].forEach(k=>{
-    const av=Number(a[k]);
-    const bv=Number(b?.[k]);
-    o[k]=Number.isFinite(av) && Number.isFinite(bv)
-      ? av+(bv-av)*t
-      : (Number.isFinite(av)?av:null);
+    const av=Number(a[k]), bv=Number(b?.[k]);
+    o[k]=Number.isFinite(av) && Number.isFinite(bv) ? av+(bv-av)*t : null;
   });
   return o;
 }
@@ -291,7 +275,7 @@ $("#saveBtn").addEventListener("click", async ()=>{
   }
 
   if(ageMonths(date)>24){
-    alert("V3.7 目前先支援 0–24 個月；之後可再擴充到 5 歲 / 7 歲。");
+    alert("V3.8 目前先支援 0–24 個月；之後可再擴充到 5 歲 / 7 歲。");
     return;
   }
 
@@ -341,7 +325,7 @@ $("#saveBtn").addEventListener("click", async ()=>{
 });
 
 $("#clearBtn").addEventListener("click",()=>{
-  alert("V3.7 每筆歷史紀錄後方都有刪除鍵；刪除確認後會直接同步移除 Google 試算表資料。");
+  alert("V3.8 每筆歷史紀錄後方都有刪除鍵；刪除確認後會直接同步移除 Google 試算表資料。");
 });
 document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click",()=>{
   document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
@@ -448,63 +432,47 @@ function drawChart(){
 
 function renderRecords(){
   const area=$("#recordArea");
-  if(!area) return;
-
-  const valid=Array.isArray(records)
-    ? records.filter(r=>r && String(r.date||"").trim())
-    : [];
+  const valid=records.filter(r=>r && r.date);
 
   if(!valid.length){
-    area.innerHTML='<div class="empty">目前沒有歷次紀錄。</div>';
+    area.innerHTML='<div class="empty">目前沒有歷次紀錄。新增成功後會立即出現在這裡，並同步到 Google 試算表。</div>';
     return;
   }
 
-  const items=valid.slice().reverse().map(r=>{
-    const date=String(r.date||"").slice(0,10);
+  const rows=valid.slice().reverse().map(r=>{
+    const date=String(r.date||"");
     const m=ageMonths(date);
-
     const hp=r.height==null?null:percentile("height",m,Number(r.height));
     const wp=r.weight==null?null:percentile("weight",m,Number(r.weight));
     const cp=r.head==null?null:percentile("head",m,Number(r.head));
 
-    const ageText=ageLabel(date);
-    const safeDate=date.replace(/-/g,"/");
-
-    return `<div class="history-item">
-      <div class="history-top">
-        <div>
-          <div class="history-date">${safeDate}</div>
-          <div class="history-age">${ageText}｜${r.recorder||"—"}</div>
-        </div>
-        <button class="danger deleteRowBtn"
-          data-key="${encodeURIComponent(recordKey(r))}"
-          style="font-size:13px;padding:7px 10px">刪除</button>
-      </div>
-
-      <div class="history-values">
-        <div class="history-value">
-          <small>身高 / 身長</small>
-          <b>${r.height??"—"}${r.height!=null?" cm":""}</b>
-          <div class="history-pr">${r.height!=null?pctText(hp):"—"}</div>
-        </div>
-        <div class="history-value">
-          <small>體重</small>
-          <b>${r.weight??"—"}${r.weight!=null?" kg":""}</b>
-          <div class="history-pr">${r.weight!=null?pctText(wp):"—"}</div>
-        </div>
-        <div class="history-value">
-          <small>頭圍</small>
-          <b>${r.head??"—"}${r.head!=null?" cm":""}</b>
-          <div class="history-pr">${r.head!=null?pctText(cp):"—"}</div>
-        </div>
-      </div>
-    </div>`;
+    return `<tr>
+      <td>${date.replaceAll("-","/")}</td>
+      <td>${ageLabel(date).replace(" 個月 ","月").replace(" 天","天")}</td>
+      <td>${r.height??"—"}</td><td class="pr">${pctText(hp)}</td>
+      <td>${r.weight??"—"}</td><td class="pr">${pctText(wp)}</td>
+      <td>${r.head??"—"}</td><td class="pr">${pctText(cp)}</td>
+      <td>${r.recorder||"—"}</td>
+      <td><button class="danger deleteRowBtn" data-key="${encodeURIComponent(recordKey(r))}" style="font-size:13px;padding:6px 9px">刪除</button></td>
+    </tr>`;
   }).join("");
 
   area.innerHTML=`<div class="note" style="margin:8px 0 6px">
-    目前共 ${valid.length} 筆紀錄｜來源：Google 試算表
-  </div>
-  <div class="history-list">${items}</div>`;
+      目前共 ${valid.length} 筆紀錄
+      
+    </div>
+    <div class="tablewrap">
+    <table class="records">
+      <thead><tr>
+        <th>日期</th><th>月齡</th>
+        <th>身高</th><th>身高PR</th>
+        <th>體重</th><th>體重PR</th>
+        <th>頭圍</th><th>頭圍PR</th>
+        <th>紀錄者</th><th>操作</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
 
   area.querySelectorAll(".deleteRowBtn").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
@@ -513,7 +481,7 @@ function renderRecords(){
       if(!target) return;
 
       const detail=[
-        target.date ? String(target.date).slice(0,10).replace(/-/g,"/") : "",
+        target.date ? target.date.replaceAll("-","/") : "",
         target.height!=null ? `身高 ${target.height} cm` : "",
         target.weight!=null ? `體重 ${target.weight} kg` : "",
         target.head!=null ? `頭圍 ${target.head} cm` : "",
@@ -529,7 +497,7 @@ function renderRecords(){
       try{
         const data=await apiJSONP({
           action:"delete",
-          date:String(target.date).slice(0,10),
+          date:target.date,
           height:target.height,
           weight:target.weight,
           head:target.head,
@@ -548,21 +516,47 @@ function renderRecords(){
       }catch(err){
         btn.disabled=false;
         btn.textContent="刪除";
-        $("#syncStatus").textContent="⚠ 刪除失敗：" + (err?.message || "未知錯誤");
+        $("#syncStatus").textContent="⚠ 刪除失敗，請重新同步後再試";
         console.error(err);
       }
     });
   });
 }
 
+
+function normalizeDateValue(value){
+  if(value==null || value==="") return "";
+
+  const s=String(value).trim();
+
+  // yyyy-MM-dd / yyyy/MM/dd / ISO datetime
+  const direct=s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+  if(direct){
+    return `${direct[1]}-${String(direct[2]).padStart(2,"0")}-${String(direct[3]).padStart(2,"0")}`;
+  }
+
+  // Apps Script / JS Date string, e.g. "Mon Aug 03 2026 ..."
+  const d=new Date(s);
+  if(!Number.isNaN(d.getTime())){
+    const y=d.getFullYear();
+    const m=String(d.getMonth()+1).padStart(2,"0");
+    const day=String(d.getDate()).padStart(2,"0");
+    return `${y}-${m}-${day}`;
+  }
+
+  return "";
+}
+
 function normalizeRecords(list){
   return (list||[]).map(r=>({
-    date:String(r.date||""),
+    date:normalizeDateValue(r.date),
     height:r.height==null?null:Number(r.height),
     weight:r.weight==null?null:Number(r.weight),
     head:r.head==null?null:Number(r.head),
     recorder:r.recorder||""
-  })).filter(r=>r.date).sort((a,b)=>a.date.localeCompare(b.date));
+  }))
+  .filter(r=>r.date)
+  .sort((a,b)=>a.date.localeCompare(b.date));
 }
 
 async function loadCloud(silent=false){
@@ -579,7 +573,6 @@ async function loadCloud(silent=false){
     records=cloudRecords.slice();
 
     $("#syncStatus").textContent=`✓ API V${data.version}｜已同步 ${records.length} 筆共用紀錄`;
-    renderRecords();
 
   }catch(err){
     $("#syncStatus").textContent="⚠ 無法讀取共用試算表：" + (err?.message || "未知錯誤");
@@ -592,21 +585,10 @@ async function loadCloud(silent=false){
 $("#syncBtn").addEventListener("click",()=>loadCloud(false));
 
 function renderAll(){
-  try{
-    renderRecords();
-  }catch(err){
-    console.error("renderRecords error",err);
-    const area=$("#recordArea");
-    if(area){
-      area.innerHTML=`<div class="empty">歷次紀錄顯示錯誤：${String(err?.message||err)}</div>`;
-    }
-  }
-
-  try{ updateAge(); }catch(err){ console.error("updateAge error",err); }
-  try{ previewStats(); }catch(err){ console.error("previewStats error",err); }
-  try{ drawChart(); }catch(err){
-    console.error("drawChart error",err);
-  }
+  try{ renderRecords(); }catch(err){ console.error("renderRecords",err); }
+  try{ updateAge(); }catch(err){ console.error("updateAge",err); }
+  try{ previewStats(); }catch(err){ console.error("previewStats",err); }
+  try{ drawChart(); }catch(err){ console.error("drawChart",err); }
 }
 renderAll();
 loadCloud();
