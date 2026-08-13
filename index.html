@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#8fa1aa">
-<title>大福｜寶寶生長助手 V2.4</title>
+<title>大福｜寶寶生長助手 V2.6</title>
 <style>
 :root{
   --bg:#eef2f4;--panel:#fff;--ink:#263238;--muted:#73808a;--line:#d7e0e5;
@@ -46,7 +46,7 @@ svg{width:100%;height:auto;display:block}
   <section class="hero">
     <div class="age" id="ageText">大福</div>
     <h1>成長曲線</h1>
-    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards｜V2.4</div>
+    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards｜V2.6</div>
   </section>
 
   <section class="card">
@@ -61,6 +61,7 @@ svg{width:100%;height:auto;display:block}
       </select></div>
     </div>
     <button class="primary" id="saveBtn">加入這次紀錄</button>
+    <div class="note" style="margin-top:6px;text-align:center">新增成功後會自動清空身高、體重、頭圍，方便輸入下一筆。</div>
     <button class="secondary" id="syncBtn" type="button" style="width:100%;margin-top:8px">重新同步共用資料</button>
     <div id="syncStatus" class="note" style="margin-top:8px;text-align:center" aria-live="polite">正在同步共用資料…</div>
     <div class="stats" id="stats">
@@ -69,6 +70,14 @@ svg{width:100%;height:auto;display:block}
       <div class="stat"><small>頭圍百分位</small><b>—</b></div>
     </div>
     <div class="note" style="margin-top:8px;text-align:center">PR 依大福「實際月齡」計算，不是只套整月表格。</div>
+  </section>
+
+  <section class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <h2 style="font-size:18px;margin:0">歷次紀錄</h2>
+      <button id="clearBtn" class="secondary" style="font-size:14px;padding:8px 10px">刪除說明</button>
+    </div>
+    <div id="recordArea"></div>
   </section>
 
   <div class="tabs">
@@ -83,15 +92,8 @@ svg{width:100%;height:auto;display:block}
     <svg id="chart" viewBox="0 0 720 620" role="img" aria-label="大福生長曲線"></svg>
   </section>
 
-  <section class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-      <h2 style="font-size:18px;margin:0">歷次紀錄</h2>
-      <button id="clearBtn" class="danger" style="font-size:14px;padding:8px 10px">清除全部</button>
-    </div>
-    <div id="recordArea"></div>
-  </section>
 
-  <p class="note">資料來源：WHO Child Growth Standards。V2.4 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。圖表可切換身高＋體重、身高、體重、頭圍。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
+  <p class="note">資料來源：WHO Child Growth Standards。V2.6 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。圖表可切換身高＋體重、身高、體重、頭圍。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
 </div>
 
 <script>
@@ -104,7 +106,7 @@ let records=[];
 let cloudRecords=[];
 let pendingRecords=JSON.parse(localStorage.getItem("babyGrowthPending")||"[]");
 
-// V2.4 起 Google 試算表為正式歷史紀錄來源。
+// V2.6 起 Google 試算表為正式歷史紀錄來源。
 // 舊版 babyGrowthDafu 只當快取，不再拿來覆蓋雲端刪除結果。
 localStorage.removeItem("babyGrowthDafu");
 
@@ -163,6 +165,14 @@ function previewStats(){
   }).join("");
 }
 
+function clearMeasurementInputs(){
+  $("#height").value="";
+  $("#weight").value="";
+  $("#head").value="";
+  previewStats();
+  $("#height").focus();
+}
+
 function recordKey(r){
   return [
     String(r.date||""),
@@ -203,7 +213,7 @@ $("#saveBtn").addEventListener("click", ()=>{
   const height=parseFloat($("#height").value),weight=parseFloat($("#weight").value),head=parseFloat($("#head").value);
   const recorder=$("#recorder").value;
   if(!date || (!isFinite(height)&&!isFinite(weight)&&!isFinite(head))){alert("請至少輸入一項測量數值");return}
-  if(ageMonths(date)>24){alert("V2.4 目前先支援 0–24 個月；之後可再擴充到 5 歲 / 7 歲。");return}
+  if(ageMonths(date)>24){alert("V2.6 目前先支援 0–24 個月；之後可再擴充到 5 歲 / 7 歲。");return}
 
   const item={
     date,
@@ -213,9 +223,10 @@ $("#saveBtn").addEventListener("click", ()=>{
     recorder
   };
 
-  // 防止重複按：同一筆資料若已存在，就不再新增
+  // 防止同一筆資料重複送出，但要讓使用者知道按鈕沒有失效
   if(records.some(r=>sameMeasurement(r,item))){
-    $("#syncStatus").textContent="✓ 這筆紀錄已存在，不重複新增";
+    $("#syncStatus").textContent="ℹ 這筆資料已經存在；請修改日期或數值後再新增。";
+    clearMeasurementInputs();
     return;
   }
 
@@ -225,8 +236,9 @@ $("#saveBtn").addEventListener("click", ()=>{
   localStorage.setItem("babyGrowthPending",JSON.stringify(pendingRecords));
   records=mergeRecords(cloudRecords,pendingRecords);
   renderAll();
+  clearMeasurementInputs();
 
-  $("#syncStatus").textContent=`✓ 已完成本機紀錄，正在背景同步（${recorder}）`;
+  $("#syncStatus").textContent=`✓ 已加入紀錄，正在背景同步（${recorder}）`;
 
   let finished=false;
   const timer=setTimeout(()=>{
@@ -253,7 +265,7 @@ $("#saveBtn").addEventListener("click", ()=>{
 });
 
 $("#clearBtn").addEventListener("click",()=>{
-  alert("共用版以 Google 試算表為正式歷史紀錄。若要刪除，請直接到 Google 試算表刪除該列，再按「重新同步共用資料」。");
+  alert("V2.6 的正式歷史紀錄以 Google 試算表為準。若要刪除某筆資料，請直接在 Google 試算表刪除該列，再回網頁按「重新同步共用資料」。");
 });
 document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click",()=>{
   document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
@@ -363,7 +375,7 @@ function renderRecords(){
   const valid=records.filter(r=>r && r.date);
 
   if(!valid.length){
-    area.innerHTML='<div class="empty">還沒有紀錄。共用版以 Google 試算表中的資料為準。</div>';
+    area.innerHTML='<div class="empty">目前沒有歷次紀錄。新增成功後會立即出現在這裡，並同步到 Google 試算表。</div>';
     return;
   }
 
@@ -385,7 +397,8 @@ function renderRecords(){
     </tr>`;
   }).join("");
 
-  area.innerHTML=`<div class="tablewrap">
+  area.innerHTML=`<div class="note" style="margin:8px 0 6px">目前共 ${valid.length} 筆紀錄</div>
+    <div class="tablewrap">
     <table class="records">
       <thead><tr>
         <th>日期</th><th>月齡</th>
