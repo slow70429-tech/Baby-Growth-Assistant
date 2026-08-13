@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#8fa1aa">
-<title>大福｜寶寶生長助手 V2.1</title>
+<title>大福｜寶寶生長助手 V2.2</title>
 <style>
 :root{
   --bg:#eef2f4;--panel:#fff;--ink:#263238;--muted:#73808a;--line:#d7e0e5;
@@ -46,7 +46,7 @@ svg{width:100%;height:auto;display:block}
   <section class="hero">
     <div class="age" id="ageText">大福</div>
     <h1>成長曲線</h1>
-    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards｜V2.1</div>
+    <div class="sub">男寶寶｜出生 2025/10/06｜WHO Child Growth Standards｜V2.2</div>
   </section>
 
   <section class="card">
@@ -61,12 +61,14 @@ svg{width:100%;height:auto;display:block}
       </select></div>
     </div>
     <button class="primary" id="saveBtn">加入這次紀錄</button>
+    <button class="secondary" id="syncBtn" type="button" style="width:100%;margin-top:8px">重新同步共用資料</button>
     <div id="syncStatus" class="note" style="margin-top:8px;text-align:center" aria-live="polite">正在同步共用資料…</div>
     <div class="stats" id="stats">
       <div class="stat"><small>身高百分位</small><b>—</b></div>
       <div class="stat"><small>體重百分位</small><b>—</b></div>
       <div class="stat"><small>頭圍百分位</small><b>—</b></div>
     </div>
+    <div class="note" style="margin-top:8px;text-align:center">PR 依大福「實際月齡」計算，不是只套整月表格。</div>
   </section>
 
   <div class="tabs">
@@ -89,7 +91,7 @@ svg{width:100%;height:auto;display:block}
     <div id="recordArea"></div>
   </section>
 
-  <p class="note">資料來源：WHO Child Growth Standards。V2.1 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。圖表可切換身高＋體重、身高、體重、頭圍。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
+  <p class="note">資料來源：WHO Child Growth Standards。V2.2 使用男童 0–24 個月之體重、身長及頭圍年齡別標準。圖表可切換身高＋體重、身高、體重、頭圍。百分位依 WHO LMS 參數計算，月齡以實際出生日至測量日換算並在相鄰月份間插值。此工具用於成長紀錄與趨勢參考，不能取代兒科醫師的專業評估。</p>
 </div>
 
 <script>
@@ -155,17 +157,16 @@ function previewStats(){
     return `<div class="stat"><small>${label}</small><b>${pctText(p)}</b></div>`;
   }).join("");
 }
-$("#saveBtn").addEventListener("click", async ()=>{
+$("#saveBtn").addEventListener("click", ()=>{
   const date=$("#measureDate").value;
   const height=parseFloat($("#height").value),weight=parseFloat($("#weight").value),head=parseFloat($("#head").value);
   const recorder=$("#recorder").value;
   if(!date || (!isFinite(height)&&!isFinite(weight)&&!isFinite(head))){alert("請至少輸入一項測量數值");return}
-  if(ageMonths(date)>24){alert("V2 目前先支援 0–24 個月；之後可再擴充到 5 歲 / 7 歲。");return}
+  if(ageMonths(date)>24){alert("V2.2 目前先支援 0–24 個月；之後可再擴充到 5 歲 / 7 歲。");return}
 
   const item={date,height:isFinite(height)?height:null,weight:isFinite(weight)?weight:null,head:isFinite(head)?head:null,recorder};
-  $("#syncStatus").textContent="正在儲存到共用資料…";
 
-  // 先在本機立即更新，讓操作不卡住
+  // 立刻完成本機紀錄，不讓使用者等待雲端
   records=records.filter(r=>r.date!==date);
   records.push(item);
   records.sort((a,b)=>a.date.localeCompare(b.date));
@@ -173,17 +174,30 @@ $("#saveBtn").addEventListener("click", async ()=>{
   localStorage.setItem("babyGrowthDafu",JSON.stringify(localBackup));
   renderAll();
 
-  try{
-    await fetch(API_URL,{
-      method:"POST",
-      mode:"no-cors",
-      headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body:JSON.stringify(item)
-    });
+  $("#syncStatus").textContent=`✓ 已完成本機紀錄，正在背景同步（${recorder}）`;
+
+  let finished=false;
+  const timer=setTimeout(()=>{
+    if(!finished){
+      $("#syncStatus").textContent="⚠ 雲端同步較慢，資料已先保存在本機，可稍後按「重新同步共用資料」確認";
+    }
+  },1800);
+
+  fetch(API_URL,{
+    method:"POST",
+    mode:"no-cors",
+    headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body:JSON.stringify(item)
+  }).then(()=>{
+    finished=true;
+    clearTimeout(timer);
     $("#syncStatus").textContent=`✓ 已送出共用資料（${recorder}）`;
-  }catch(err){
-    $("#syncStatus").textContent="⚠ 雲端儲存失敗，目前先保留在這台手機";
-  }
+    setTimeout(()=>loadCloud(true),700);
+  }).catch(()=>{
+    finished=true;
+    clearTimeout(timer);
+    $("#syncStatus").textContent="⚠ 雲端同步失敗，資料已先保存在本機";
+  });
 });
 $("#clearBtn").addEventListener("click",()=>{
   alert("共用版為避免誤刪，目前先不開放從網頁清除雲端紀錄。若要刪除，先直接在 Google 試算表刪除該列。");
@@ -327,10 +341,13 @@ function renderRecords(){
     </table>
   </div>`;
 }
-async function loadCloud(){
-  $("#syncStatus").textContent="正在同步共用資料…";
+async function loadCloud(silent=false){
+  if(!silent) $("#syncStatus").textContent="正在同步共用資料…";
   try{
-    const res=await fetch(API_URL+"?t="+Date.now(),{cache:"no-store"});
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),3500);
+    const res=await fetch(API_URL+"?t="+Date.now(),{cache:"no-store",signal:controller.signal});
+    clearTimeout(timeout);
     const data=await res.json();
     if(data && data.ok && Array.isArray(data.records)){
       records=data.records.map(r=>({
@@ -349,10 +366,12 @@ async function loadCloud(){
     }
   }catch(err){
     records=localBackup.slice();
-    $("#syncStatus").textContent="⚠ 無法讀取雲端，先顯示這台裝置的備份";
+    $("#syncStatus").textContent="⚠ 暫時無法讀取雲端，先顯示這台裝置的備份";
   }
   renderAll();
 }
+
+$("#syncBtn").addEventListener("click",()=>loadCloud(false));
 
 function renderAll(){updateAge();previewStats();drawChart();renderRecords()}
 renderAll();
