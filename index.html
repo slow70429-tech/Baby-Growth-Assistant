@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#8fa1aa">
-<title>大福｜寶寶助手 V4.1.6</title>
+<title>大福｜寶寶助手 V4.1.7</title>
 <style>
 :root{
   --bg:#eef2f4;--panel:#fff;--ink:#263238;--muted:#73808a;--line:#d7e0e5;
@@ -15,6 +15,7 @@ body{margin:0;background:var(--bg);font-family:"Arial Rounded MT Bold","SF Pro R
 .wrap{max-width:760px;margin:auto;padding:env(safe-area-inset-top) 12px calc(32px + env(safe-area-inset-bottom))}
 .hero{background:#91a2aa;color:white;margin:0 -12px 14px;padding:20px 18px 16px;text-align:center}
 .hero h1{margin:3px 0 5px;font-size:25px}.hero .age{font-size:19px}.hero .sub{opacity:.9;font-size:14px}
+.heroTop{display:flex;align-items:center;justify-content:center;gap:11px}.avatarWrap{position:relative;width:56px;height:56px;flex:0 0 56px;cursor:pointer}.avatar{width:56px;height:56px;border-radius:50%;object-fit:cover;display:block;border:2px solid #ffffffcc;background:#a9b7bd}.avatarPlaceholder{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#ffffff26;border:2px solid #ffffffaa;font-size:27px}.avatarCam{position:absolute;right:-2px;bottom:-2px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#fff;color:#607680;font-size:11px;box-shadow:0 1px 4px #0003}.heroText{text-align:left}.heroText h1{margin:1px 0 3px}.heroText .age{white-space:nowrap}@media(max-width:380px){.avatarWrap,.avatar,.avatarPlaceholder{width:50px;height:50px}.avatarWrap{flex-basis:50px}.heroTop{gap:9px}.hero h1{font-size:23px}.hero .age{font-size:17px}}
 .card{background:white;border-radius:18px;padding:16px;margin:12px 0;box-shadow:0 1px 4px #00000010}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media(max-width:520px){.grid{grid-template-columns:1fr}}
@@ -44,7 +45,7 @@ svg{width:100%;height:auto;display:block}
 
 .timepicker{display:grid;grid-template-columns:1.15fr .85fr .85fr;gap:6px}.timepicker select{width:100%;font-size:16px;border:1px solid #ccd7dd;border-radius:10px;padding:9px 6px;background:#fff;color:#263238}.timepicker select:disabled{opacity:.45;background:#f3f5f6}.timehint{font-size:11px;color:#89959c;margin-top:3px}.daychart{margin-top:10px}.chartaxis{display:grid;grid-template-columns:68px 1fr;align-items:end;margin-bottom:5px}.chartticks{position:relative;height:24px;font-size:10px;color:#87939a;white-space:nowrap}.chartticks span{position:absolute;transform:translateX(-50%)}.chartticks span:first-child{transform:none}.chartticks span:last-child{transform:translateX(-100%)}.chartrow{display:grid;grid-template-columns:68px 1fr;align-items:center;min-height:38px;margin:4px 0}.chartlabel{font-size:12px;font-weight:700;color:#5e6e77;white-space:nowrap}.charttrack{height:32px;position:relative;border-radius:8px;background:repeating-linear-gradient(to right,#f6f8f9 0,#f6f8f9 calc(25% - 1px),#dde5e9 calc(25% - 1px),#dde5e9 25%);overflow:hidden}.chartbar{position:absolute;top:6px;height:20px;min-width:5px;border-radius:9px;background:#91a7b1;color:#fff;font-size:9px;line-height:20px;padding:0 4px;white-space:nowrap;overflow:hidden}.chartdot{position:absolute;top:9px;width:14px;height:14px;border-radius:50%;background:#718c98;transform:translateX(-50%);box-shadow:0 0 0 2px #fff}.chartdot::after{content:attr(data-time);position:absolute;top:15px;left:50%;transform:translateX(-50%);font-size:8px;color:#657780;white-space:nowrap}.chartempty{text-align:center;color:#8a969d;padding:14px 0;font-size:13px}
 
-/* V4.1.6 手機版面瘦身＋圓潤字體 */
+/* V4.1.7 手機版面瘦身＋圓潤字體 */
 :root{font-family:ui-rounded,"SF Pro Rounded","Arial Rounded MT Bold","PingFang TC","Noto Sans TC",system-ui,sans-serif}
 body,button,input,select,textarea{font-family:inherit}
 .sheet{width:min(94vw,680px);padding:16px 15px 14px;border-radius:24px;max-height:84dvh}
@@ -56,9 +57,19 @@ body,button,input,select,textarea{font-family:inherit}
 <body>
 <div class="wrap">
   <section class="hero">
-    <div class="age" id="ageText">👶 大福</div>
-    <h1>寶寶助手</h1>
-    <div class="sub">每日生活＋成長曲線｜V4.1.6 共用版</div>
+    <div class="heroTop">
+      <div class="avatarWrap" id="avatarWrap" title="點一下更換寶寶頭像">
+        <div class="avatarPlaceholder" id="avatarPlaceholder">👶</div>
+        <img class="avatar" id="babyAvatar" alt="大福頭像" style="display:none">
+        <span class="avatarCam">📷</span>
+        <input id="avatarInput" type="file" accept="image/*" style="display:none">
+      </div>
+      <div class="heroText">
+        <div class="age" id="ageText">大福</div>
+        <h1>寶寶助手</h1>
+        <div class="sub">每日生活＋成長曲線｜V4.1.7 共用版</div>
+      </div>
+    </div>
   </section>
   <div class="appnav"><button id="navDaily" class="active">📅 每日紀錄</button><button id="navGrowth">📈 成長曲線</button></div>
 
@@ -72,7 +83,7 @@ body,button,input,select,textarea{font-family:inherit}
     <section class="card"><h2 style="font-size:18px;margin-top:0">📊 今日統計</h2><div class="summary" id="dailySummary"></div></section>
     <section class="card"><h2 style="font-size:18px;margin-top:0">🗓️ 每日行程圖</h2><div class="note">一天的作息一眼看懂；睡覺／出遊顯示區間，其他紀錄顯示時間點。</div><div id="dailyChart" class="daychart"></div></section>
     <section class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="font-size:18px;margin:0">🕐 今日時間軸</h2><button id="todayBtn" class="secondary" style="font-size:13px;padding:7px 9px">今天</button></div><div id="timeline" class="timeline"></div></section>
-    <section class="card"><h2 style="font-size:18px;margin-top:0">資料備份</h2><div class="localwarn">V4.1.6 共用版：每日生活紀錄會先存本機，再與 Google 試算表同步；兩支手機可共用同一份資料。原本成長曲線資料維持原工作表，不改動。</div><div id="dailyCloudStatus" class="note" style="margin-top:8px;text-align:center">每日紀錄：尚未同步</div><button id="syncDailyBtn" class="secondary" style="width:100%;margin-top:8px">🔄 同步每日紀錄</button><div class="exportrow"><button id="exportDaily" class="secondary">匯出每日紀錄</button><button id="importDaily" class="secondary">匯入備份</button></div><input id="importFile" type="file" accept="application/json" style="display:none"></section>
+    <section class="card"><h2 style="font-size:18px;margin-top:0">資料備份</h2><div class="localwarn">V4.1.7 共用版：每日生活紀錄會先存本機，再與 Google 試算表同步；兩支手機可共用同一份資料。原本成長曲線資料維持原工作表，不改動。</div><div id="dailyCloudStatus" class="note" style="margin-top:8px;text-align:center">每日紀錄：尚未同步</div><button id="syncDailyBtn" class="secondary" style="width:100%;margin-top:8px">🔄 同步每日紀錄</button><div class="exportrow"><button id="exportDaily" class="secondary">匯出每日紀錄</button><button id="importDaily" class="secondary">匯入備份</button></div><input id="importFile" type="file" accept="application/json" style="display:none"></section>
   </div>
 
   <div id="growthPage" class="page">
@@ -88,7 +99,7 @@ body,button,input,select,textarea{font-family:inherit}
       </select></div>
     </div>
     <button class="primary" id="saveBtn">加入這次紀錄</button>
-    <div class="note" style="margin-top:6px;text-align:center">V4.1.6 保留既有成長資料機制；刪除仍用 Google 試算表列號，不再用日期與數值比對。</div>
+    <div class="note" style="margin-top:6px;text-align:center">V4.1.7 保留既有成長資料機制；刪除仍用 Google 試算表列號，不再用日期與數值比對。</div>
     <button class="secondary" id="syncBtn" type="button" style="width:100%;margin-top:8px">重新同步共用資料</button>
     <div id="syncStatus" class="note" style="margin-top:8px;text-align:center" aria-live="polite">正在同步共用資料…</div>
     <div class="stats" id="stats">
@@ -706,7 +717,7 @@ function setMainPage(which){
   document.querySelector('#navDaily').classList.toggle('active',d);
   document.querySelector('#navGrowth').classList.toggle('active',!d);
   if(d){
-    // V4.1.6：每次回到每日紀錄，都先從本機快取重載並立即重畫。
+    // V4.1.7：每次回到每日紀錄，都先從本機快取重載並立即重畫。
     // 如此即使剛切過成長曲線，也不會因畫面狀態或同步時序而看不到剛新增的紀錄。
     loadDaily();
     renderDaily();
@@ -748,6 +759,28 @@ function timeToMin(v){const t=normalizeDailyTime(v);if(!t)return null;const [h,m
 function renderDailyChart(arr){const box=document.querySelector('#dailyChart');if(!box)return;if(!arr.length){box.innerHTML='<div class="chartempty">這一天還沒有行程</div>';return}const order=['sleep','wake','milk','food','toilet','cry','outing','doctor'];const rows=order.filter(type=>arr.some(r=>r.type===type)).map(type=>{const items=arr.filter(r=>r.type===type);let marks='';items.forEach(r=>{const st=timeToMin(r.start||r.time),en=timeToMin(r.end);if(st==null)return;const left=Math.max(0,Math.min(100,st/1440*100));if(en!=null&&en!==st){let dur=en-st;if(dur<0)dur+=1440;const width=Math.max(.8,Math.min(100-left,dur/1440*100));marks+=`<div class="chartbar" style="left:${left}%;width:${width}%" title="${esc(formatTime12(r.start||r.time))}–${esc(formatTime12(r.end))}">${typeInfo[type][0]}</div>`}else{marks+=`<div class="chartdot" data-time="${esc(formatTime12(r.time).replace('上午 ','上').replace('下午 ','下'))}" style="left:${left}%" title="${esc(formatTime12(r.time))}"></div>`}});return `<div class="chartrow"><div class="chartlabel">${typeInfo[type][0]} ${typeInfo[type][1]}</div><div class="charttrack">${marks}</div></div>`}).join('');box.innerHTML=`<div class="chartaxis"><div></div><div class="chartticks"><span style="left:0%">上午12</span><span style="left:25%">上午6</span><span style="left:50%">中午12</span><span style="left:75%">下午6</span><span style="left:100%">晚上12</span></div></div>${rows}`}
 function renderDaily(){const day=normalizeDailyDate(dailyDate.value),arr=dailyRecords.map(normalizeDailyRecord).filter(Boolean).filter(r=>normalizeDailyDate(r.date)===day).sort((a,b)=>(normalizeDailyTime(a.time)||'').localeCompare(normalizeDailyTime(b.time)||''));const milk=arr.filter(r=>r.type==='milk'),toilet=arr.filter(r=>r.type==='toilet'),cry=arr.filter(r=>r.type==='cry'),food=arr.filter(r=>r.type==='food'),sleep=arr.filter(r=>r.type==='sleep'),outing=arr.filter(r=>r.type==='outing');const cryMin=cry.reduce((s,r)=>s+minutesBetween(r.start,r.end),0),sleepMin=sleep.reduce((s,r)=>s+minutesBetween(r.start,r.end),0);document.querySelector('#dailySummary').innerHTML=`<div class="sum"><span>😴 睡覺</span><b>${sleep.length} 次</b>${sleepMin?Math.floor(sleepMin/60)+' 小時 '+(sleepMin%60)+' 分':''}</div><div class="sum"><span>🍼 奶</span><b>${milk.length} 次</b>${milk.reduce((s,r)=>s+(+r.drank||0),0)} mL</div><div class="sum"><span>💩 廁所</span><b>${toilet.length} 次</b>大號 ${toilet.filter(r=>r.kind==='大號'||r.kind==='都有').length}</div><div class="sum"><span>😭 哭鬧</span><b>${cry.length} 次</b>${cryMin} 分</div><div class="sum"><span>🥣 副食品</span><b>${food.length} 次</b>${food.reduce((s,r)=>s+minutesBetween(r.start||r.time,r.end),0)?food.reduce((s,r)=>s+minutesBetween(r.start||r.time,r.end),0)+' 分':''}</div><div class="sum"><span>🚗 出遊</span><b>${outing.length} 次</b></div><div class="sum"><span>🏥 看診</span><b>${arr.filter(r=>r.type==='doctor').length} 次</b></div><div class="sum"><span>📌 全部</span><b>${arr.length} 筆</b></div>`;renderDailyChart(arr);const box=document.querySelector('#timeline');if(!arr.length){box.innerHTML='<div class="empty">這一天還沒有紀錄</div>';return}box.innerHTML=arr.map(r=>`<div class="event"><div class="eventtime">${esc(formatTime12(r.time))}</div><div class="eventbody"><div class="eventtitle">${typeInfo[r.type]?.[0]||''} ${typeInfo[r.type]?.[1]||r.type}</div><div class="eventmeta">${detail(r)}</div>${r.photo?`<img class="thumb" src="${r.photo}">`:''}<div class="eventactions"><button class="secondary editDaily" data-id="${r.id}">✏️ 修改</button><button class="danger delDaily" data-id="${r.id}">🗑️ 刪除</button></div></div></div>`).join('');box.querySelectorAll('.editDaily').forEach(b=>b.onclick=()=>{const r=dailyRecords.find(x=>x.id===b.dataset.id);if(r)openEvent(r.type,normalizeDailyRecord(r))});box.querySelectorAll('.delDaily').forEach(b=>b.onclick=()=>{const r=dailyRecords.find(x=>x.id===b.dataset.id);if(r&&confirm(`刪除 ${formatTime12(r.time)} 的${typeInfo[r.type][1]}紀錄？`)){deleteDailyRecord(r.id)}})}
 document.querySelector('#exportDaily').onclick=()=>{const blob=new Blob([JSON.stringify({version:'4.1.4',exportedAt:new Date().toISOString(),records:dailyRecords},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`大福_每日紀錄_${localDateStr()}.json`;a.click();URL.revokeObjectURL(a.href)};document.querySelector('#importDaily').onclick=()=>document.querySelector('#importFile').click();document.querySelector('#importFile').onchange=e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const x=JSON.parse(rd.result),arr=Array.isArray(x)?x:x.records;if(!Array.isArray(arr))throw 0;if(confirm(`匯入 ${arr.length} 筆紀錄？會與目前資料合併。`)){const m=new Map(dailyRecords.map(r=>[r.id,r]));arr.forEach(r=>m.set(r.id,r));dailyRecords=[...m.values()];persistDaily();arr.forEach(r=>queueDailyOp({action:'save',id:r.id,record:r}));syncDailyFromCloud(false)}}catch(_){alert('備份檔格式不正確')}};rd.readAsText(f)};
+// ===== V4.1.7 寶寶頭像（僅存小尺寸本機資料，不增加頁面高度） =====
+const AVATAR_KEY="dafu_avatar_v1";
+function showBabyAvatar(src){
+  const img=document.querySelector('#babyAvatar'), ph=document.querySelector('#avatarPlaceholder');
+  if(src){img.src=src;img.style.display='block';ph.style.display='none'}
+  else{img.removeAttribute('src');img.style.display='none';ph.style.display='flex'}
+}
+function loadBabyAvatar(){try{showBabyAvatar(localStorage.getItem(AVATAR_KEY)||'')}catch(_){showBabyAvatar('')}}
+document.querySelector('#avatarWrap')?.addEventListener('click',()=>document.querySelector('#avatarInput')?.click());
+document.querySelector('#avatarInput')?.addEventListener('change',e=>{
+  const f=e.target.files?.[0]; if(!f)return;
+  const rd=new FileReader(); rd.onload=()=>{const im=new Image(); im.onload=()=>{
+    const size=180,c=document.createElement('canvas');c.width=size;c.height=size;
+    const ctx=c.getContext('2d'),scale=Math.max(size/im.width,size/im.height),w=im.width*scale,h=im.height*scale;
+    ctx.drawImage(im,(size-w)/2,(size-h)/2,w,h);
+    const data=c.toDataURL('image/jpeg',.72);
+    try{localStorage.setItem(AVATAR_KEY,data)}catch(_){alert('頭像儲存失敗，請換一張照片再試')}
+    showBabyAvatar(data); e.target.value='';
+  };im.src=rd.result};rd.readAsDataURL(f);
+});
+loadBabyAvatar();
+
 loadDaily();renderDaily();setMainPage('daily');document.querySelector('#syncDailyBtn').onclick=()=>syncDailyFromCloud(true);if(/^https?:$/.test(location.protocol)&&!location.hostname.includes('openai'))setTimeout(()=>syncDailyFromCloud(false),450);
 
 </script>
