@@ -48,7 +48,7 @@ svg{width:100%;height:auto;display:block}
   <section class="hero">
     <div class="age" id="ageText">👶 大福</div>
     <h1>寶寶助手</h1>
-    <div class="sub">每日生活＋成長曲線｜V4.0 測試版</div>
+    <div class="sub">每日生活＋成長曲線｜V4.0.1 預覽版</div>
   </section>
   <div class="appnav"><button id="navDaily" class="active">📅 每日紀錄</button><button id="navGrowth">📈 成長曲線</button></div>
 
@@ -61,7 +61,7 @@ svg{width:100%;height:auto;display:block}
       <button data-type="wake">🌅<br>起床</button><button data-type="milk">🍼<br>喝奶</button><button data-type="toilet">💩<br>廁所</button><button data-type="cry">😭<br>哭鬧</button><button data-type="food">🥣<br>副食品</button><button data-type="doctor">🏥<br>看診</button>
     </div></section>
     <section class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="font-size:18px;margin:0">一天時間軸</h2><button id="todayBtn" class="secondary" style="font-size:13px;padding:7px 9px">今天</button></div><div id="timeline" class="timeline"></div></section>
-    <section class="card"><h2 style="font-size:18px;margin-top:0">資料備份</h2><div class="localwarn">V4.0 測試版：每日生活紀錄先儲存在這台裝置，原本 Google 試算表的成長資料完全不動。確認介面後再接共用雲端，讓爸爸媽媽同步。</div><div class="exportrow"><button id="exportDaily" class="secondary">匯出每日紀錄</button><button id="importDaily" class="secondary">匯入備份</button></div><input id="importFile" type="file" accept="application/json" style="display:none"></section>
+    <section class="card"><h2 style="font-size:18px;margin-top:0">資料備份</h2><div class="localwarn">V4.0.1 預覽版：每日生活紀錄先儲存在這台裝置，原本 Google 試算表的成長資料完全不動。確認介面後再接共用雲端，讓爸爸媽媽同步。</div><div class="exportrow"><button id="exportDaily" class="secondary">匯出每日紀錄</button><button id="importDaily" class="secondary">匯入備份</button></div><input id="importFile" type="file" accept="application/json" style="display:none"></section>
   </div>
 
   <div id="growthPage" class="page">
@@ -614,7 +614,9 @@ function renderAll(){
   try{ drawChart(); }catch(err){ console.error("drawChart",err); }
 }
 renderAll();
-loadCloud();
+// ChatGPT 預覽模式避免每次自動觸發網路授權；需要成長雲端資料時再按同步
+$("#syncStatus").textContent="預覽模式：每日紀錄可直接測試；成長資料請按「同步」讀取";
+renderAll();
 
 // ===== V4.0 每日生活紀錄（測試版：localStorage） =====
 const DAILY_KEY="dafu_daily_v40";
