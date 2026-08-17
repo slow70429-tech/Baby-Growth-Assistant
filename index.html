@@ -71,6 +71,23 @@ body,button,input,select,textarea{font-family:inherit}
 .summaryDetailActions button{min-height:38px!important;padding:7px 10px!important;margin:0!important;font-size:13px!important}
 .summaryEmpty{text-align:center;padding:24px 10px;color:#8a7c73}
 @media(max-width:430px){.summarySheet{width:calc(100% - 12px);max-width:calc(100% - 12px);padding:14px 12px 13px}.summaryDetailItem{padding:10px}.summaryDetailActions button{flex:1}}
+
+/* V4.2.1 自訂月曆：避免 iPhone/Safari 無法由外部按鈕叫出原生日曆 */
+.calendarModal{position:fixed;inset:0;background:rgba(45,38,35,.28);display:none;align-items:flex-end;justify-content:center;z-index:1200;padding:10px}
+.calendarModal.show{display:flex}
+.calendarSheet{width:min(430px,100%);background:#fffaf7;border-radius:24px 24px 18px 18px;padding:16px 14px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -12px 35px rgba(80,55,45,.2)}
+.calendarHead{display:grid;grid-template-columns:48px 1fr 48px;gap:8px;align-items:center;margin-bottom:10px}
+.calendarHead button{min-height:44px;border-radius:14px}
+.calendarTitle{text-align:center;font-size:19px;font-weight:800;color:#67564f}
+.calendarWeek,.calendarGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.calendarWeek div{text-align:center;font-size:12px;color:#9b8b83;padding:3px 0}
+.calendarDay{aspect-ratio:1/1;border:0;border-radius:14px;background:#fff;color:#66564e;font-size:15px;font-weight:700;padding:0;min-height:42px}
+.calendarDay.other{opacity:.32}
+.calendarDay.today{box-shadow:inset 0 0 0 2px #e8b6a8}
+.calendarDay.selected{background:#efb8a9;color:#fff}
+.calendarFoot{display:flex;gap:8px;margin-top:12px}
+.calendarFoot button{flex:1;min-height:46px}
+
 </style>
 </head>
 <body>
@@ -86,7 +103,7 @@ body,button,input,select,textarea{font-family:inherit}
       <div class="heroText">
         <div class="age" id="ageText">大福</div>
         <h1>寶寶助手</h1>
-        <div class="sub">每日生活＋成長曲線｜V4.2.0 共用版</div>
+        <div class="sub">每日生活＋成長曲線｜V4.2.1 共用版</div>
       </div>
     </div>
   </section>
@@ -101,7 +118,7 @@ body,button,input,select,textarea{font-family:inherit}
     </div></section>
     <section class="card"><h2 style="font-size:18px;margin-top:0">📊 今日統計</h2><div class="summary" id="dailySummary"></div></section>
     <section class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="font-size:18px;margin:0">🕐 今日時間軸</h2><button id="todayBtn" class="secondary" style="font-size:13px;padding:7px 9px">今天</button></div><div id="timeline" class="timeline"></div></section>
-    <section class="card"><h2 style="font-size:18px;margin-top:0">資料備份</h2><div class="localwarn">V4.2.0 共用版：每日生活紀錄會先存本機，再與 Google 試算表同步；兩支手機可共用同一份資料。原本成長曲線資料維持原工作表，不改動。</div><div id="dailyCloudStatus" class="note" style="margin-top:8px;text-align:center">每日紀錄：尚未同步</div><button id="syncDailyBtn" class="secondary" style="width:100%;margin-top:8px">🔄 同步每日紀錄</button><div class="exportrow"><button id="exportDaily" class="secondary">匯出每日紀錄</button><button id="importDaily" class="secondary">匯入備份</button></div><input id="importFile" type="file" accept="application/json" style="display:none"></section>
+    <section class="card"><h2 style="font-size:18px;margin-top:0">資料備份</h2><div class="localwarn">V4.2.1 共用版：每日生活紀錄會先存本機，再與 Google 試算表同步；兩支手機可共用同一份資料。原本成長曲線資料維持原工作表，不改動。</div><div id="dailyCloudStatus" class="note" style="margin-top:8px;text-align:center">每日紀錄：尚未同步</div><button id="syncDailyBtn" class="secondary" style="width:100%;margin-top:8px">🔄 同步每日紀錄</button><div class="exportrow"><button id="exportDaily" class="secondary">匯出每日紀錄</button><button id="importDaily" class="secondary">匯入備份</button></div><input id="importFile" type="file" accept="application/json" style="display:none"></section>
   </div>
 
   <div id="growthPage" class="page">
@@ -117,7 +134,7 @@ body,button,input,select,textarea{font-family:inherit}
       </select></div>
     </div>
     <button class="primary" id="saveBtn">加入這次紀錄</button>
-    <div class="note" style="margin-top:6px;text-align:center">V4.2.0 保留既有成長資料機制；刪除仍用 Google 試算表列號，不再用日期與數值比對。</div>
+    <div class="note" style="margin-top:6px;text-align:center">V4.2.1 保留既有成長資料機制；刪除仍用 Google 試算表列號，不再用日期與數值比對。</div>
     <button class="secondary" id="syncBtn" type="button" style="width:100%;margin-top:8px">重新同步共用資料</button>
     <div id="syncStatus" class="note" style="margin-top:8px;text-align:center" aria-live="polite">正在同步共用資料…</div>
     <div class="stats" id="stats">
@@ -157,6 +174,8 @@ body,button,input,select,textarea{font-family:inherit}
 
 
 <div id="summaryModal" class="modal"><div class="sheet summarySheet"><div class="summaryModalHead"><h2 id="summaryModalTitle">今日明細</h2><button id="closeSummary" class="secondary miniClose" type="button">關閉</button></div><div id="summaryDetailList" class="summaryDetailList"></div></div></div>
+
+<div id="calendarModal" class="calendarModal" aria-hidden="true"><div class="calendarSheet" role="dialog" aria-modal="true" aria-label="選擇日期"><div class="calendarHead"><button id="calPrevMonth" class="secondary" type="button">‹</button><div id="calendarTitle" class="calendarTitle"></div><button id="calNextMonth" class="secondary" type="button">›</button></div><div class="calendarWeek"><div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div></div><div id="calendarGrid" class="calendarGrid"></div><div class="calendarFoot"><button id="calToday" class="secondary" type="button">今天</button><button id="calClose" class="secondary" type="button">關閉</button></div></div></div>
 
 <div id="eventModal" class="modal"><div class="sheet"><h2 id="modalTitle">新增紀錄</h2><div id="eventForm"></div><button id="saveEvent" class="primary">儲存</button><button id="cancelEvent" class="secondary cancel">取消</button></div></div>
 
@@ -754,11 +773,39 @@ document.querySelector('#navDaily').onclick=()=>{
 };
 document.querySelector('#navGrowth').onclick=()=>setMainPage('growth');
 const dailyDate=document.querySelector('#dailyDate');dailyDate.value=localDateStr();dailyDate.onchange=renderDaily;
-// V4.2.0：明顯的日曆按鈕。支援 showPicker 的瀏覽器直接開月曆；iPhone/Safari 則聚焦日期欄位。
-document.querySelector('#calendarBtn')?.addEventListener('click',()=>{
-  try{ if(typeof dailyDate.showPicker==='function'){ dailyDate.showPicker(); return; } }catch(_){ }
-  dailyDate.focus(); dailyDate.click();
-});
+// V4.2.1：改用自訂月曆，iPhone/Safari 也能可靠點開。
+const calendarModal=document.querySelector('#calendarModal');
+const calendarGrid=document.querySelector('#calendarGrid');
+const calendarTitle=document.querySelector('#calendarTitle');
+let calendarCursor=new Date(dailyDate.value+'T12:00:00');
+function openCalendar(){
+  const base=new Date((dailyDate.value||localDateStr())+'T12:00:00');
+  calendarCursor=new Date(base.getFullYear(),base.getMonth(),1,12);
+  renderCalendar();
+  calendarModal.classList.add('show');calendarModal.setAttribute('aria-hidden','false');
+}
+function closeCalendar(){calendarModal.classList.remove('show');calendarModal.setAttribute('aria-hidden','true')}
+function renderCalendar(){
+  const y=calendarCursor.getFullYear(),m=calendarCursor.getMonth();
+  calendarTitle.textContent=`${y} 年 ${m+1} 月`;
+  const first=new Date(y,m,1,12),start=new Date(y,m,1-first.getDay(),12);
+  const selected=dailyDate.value,today=localDateStr();
+  let html='';
+  for(let i=0;i<42;i++){
+    const d=new Date(start);d.setDate(start.getDate()+i);
+    const ds=localDateStr(d);
+    const cls=['calendarDay'];if(d.getMonth()!==m)cls.push('other');if(ds===today)cls.push('today');if(ds===selected)cls.push('selected');
+    html+=`<button type="button" class="${cls.join(' ')}" data-date="${ds}">${d.getDate()}</button>`;
+  }
+  calendarGrid.innerHTML=html;
+  calendarGrid.querySelectorAll('[data-date]').forEach(b=>b.onclick=()=>{dailyDate.value=b.dataset.date;renderDaily();closeCalendar()});
+}
+document.querySelector('#calendarBtn')?.addEventListener('click',openCalendar);
+document.querySelector('#calPrevMonth')?.addEventListener('click',()=>{calendarCursor.setMonth(calendarCursor.getMonth()-1);renderCalendar()});
+document.querySelector('#calNextMonth')?.addEventListener('click',()=>{calendarCursor.setMonth(calendarCursor.getMonth()+1);renderCalendar()});
+document.querySelector('#calToday')?.addEventListener('click',()=>{dailyDate.value=localDateStr();renderDaily();closeCalendar()});
+document.querySelector('#calClose')?.addEventListener('click',closeCalendar);
+calendarModal?.addEventListener('click',e=>{if(e.target===calendarModal)closeCalendar()});
 function moveDay(n){const d=new Date(dailyDate.value+'T12:00:00');d.setDate(d.getDate()+n);dailyDate.value=localDateStr(d);renderDaily()}
 document.querySelector('#prevDay').onclick=()=>moveDay(-1);document.querySelector('#nextDay').onclick=()=>moveDay(1);document.querySelector('#todayBtn').onclick=()=>{dailyDate.value=localDateStr();renderDaily()};
 document.querySelectorAll('.quick button[data-type]').forEach(b=>b.onclick=()=>openEvent(b.dataset.type));
