@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#8fa1aa">
-<title>大福｜寶寶助手 V4.5.7</title>
+<title>大福｜寶寶助手 V4.5.8</title>
 <style>
 :root{
   --bg:#eef2f4;--panel:#fff;--ink:#263238;--muted:#73808a;--line:#d7e0e5;
@@ -91,7 +91,7 @@ body,button,input,select,textarea{font-family:inherit}
 
 .photoUploadBox{border:1px dashed #d8c8c1;border-radius:16px;padding:11px;background:#fffdfb}.photoUploadTop{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.photoUploadTop input{font-size:14px;padding:8px}.photoHint{font-size:12px;color:#8b7b73;margin-top:6px}.photoPreviewWrap{margin-top:9px;display:flex;align-items:flex-start;gap:8px}.photoPreviewWrap .thumb{width:86px;height:86px;object-fit:cover;border-radius:14px}.removePhotoBtn{padding:8px 10px!important;min-height:auto!important;font-size:13px!important}.photoUploading{font-size:12px;color:#a16f62;margin-top:6px}
 
-/* V4.5.7：照片在助手內預覽，不另開 Safari */
+/* V4.5.8：照片在助手內預覽，不另開 Safari */
 .photoViewer{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;display:none;align-items:center;justify-content:center;padding:18px;box-sizing:border-box}
 .photoViewer.show{display:flex}.photoViewer img{display:block;max-width:100%;max-height:86dvh;object-fit:contain;border-radius:14px;box-shadow:0 10px 40px #0008}.photoViewerClose{position:absolute;top:max(14px,env(safe-area-inset-top));right:16px;width:44px;height:44px;border-radius:50%;border:0;background:#fff;color:#26343b;font-size:26px;line-height:44px;padding:0;box-shadow:0 4px 18px #0005}.photoViewerHint{position:absolute;bottom:max(16px,env(safe-area-inset-bottom));left:0;right:0;text-align:center;color:#fff;font-size:13px;opacity:.8}
 
@@ -112,7 +112,7 @@ body,button,input,select,textarea{font-family:inherit}
       <div class="heroText">
         <div class="age" id="ageText">大福</div>
         <h1>寶寶助手</h1>
-        <div class="sub">每日生活＋成長曲線｜V4.5.7 照片共用版</div>
+        <div class="sub">每日生活＋成長曲線｜V4.5.8 照片共用版</div>
       </div>
     </div>
   </section>
@@ -127,7 +127,7 @@ body,button,input,select,textarea{font-family:inherit}
     </div></section>
     <section class="card"><h2 style="font-size:18px;margin-top:0">📊 今日統計</h2><div class="summary" id="dailySummary"></div></section>
     <section class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="font-size:18px;margin:0">🕐 今日時間軸</h2><button id="todayBtn" class="secondary" style="font-size:13px;padding:7px 9px">今天</button></div><div id="timeline" class="timeline"></div></section>
-    <section class="card"><h2 style="font-size:18px;margin-top:0">資料備份</h2><div class="localwarn">V4.5.7 照片同步修正版：每日生活紀錄會先存本機，再與 Google 試算表同步；照片由 Apps Script 上傳到 Google Drive「寶寶助手照片」，試算表只保存照片連結。原本成長曲線資料維持原工作表，不改動。</div><div id="dailyCloudStatus" class="note" style="margin-top:8px;text-align:center">每日紀錄：尚未同步</div><button id="syncDailyBtn" class="secondary" style="width:100%;margin-top:8px">🔄 同步每日紀錄</button><div class="exportrow"><button id="exportDaily" class="secondary">匯出每日紀錄</button><button id="importDaily" class="secondary">匯入備份</button></div><input id="importFile" type="file" accept="application/json" style="display:none"></section>
+    <section class="card"><h2 style="font-size:18px;margin-top:0">資料備份</h2><div class="localwarn">V4.5.8 照片同步修正版：每日生活紀錄會先存本機，再與 Google 試算表同步；照片由 Apps Script 上傳到 Google Drive「寶寶助手照片」，試算表只保存照片連結。原本成長曲線資料維持原工作表，不改動。</div><div id="dailyCloudStatus" class="note" style="margin-top:8px;text-align:center">每日紀錄：尚未同步</div><button id="syncDailyBtn" class="secondary" style="width:100%;margin-top:8px">🔄 同步每日紀錄</button><div class="exportrow"><button id="exportDaily" class="secondary">匯出每日紀錄</button><button id="importDaily" class="secondary">匯入備份</button></div><input id="importFile" type="file" accept="application/json" style="display:none"></section>
   </div>
 
   <div id="albumPage" class="page">
@@ -710,7 +710,7 @@ function milkFavButtons(){return getMilkFavs().map(v=>`<button type="button" dat
 function editMilkFavorites(){const cur=getMilkFavs().join(', ');const raw=prompt('設定常用奶量（mL），用逗號分隔\n例如：160, 240, 260',cur);if(raw===null)return;const vals=[...new Set(raw.split(/[,，\s]+/).map(x=>parseInt(x,10)).filter(x=>x>0&&x<=1000))].slice(0,6);if(!vals.length){alert('請至少輸入一個奶量');return}setMilkFavs(vals);if(formType==='milk'){const box=document.querySelector('.milkFavBox');if(box){box.innerHTML=milkFavButtons();bindQuickFill();document.querySelector('#editMilkFavs')?.addEventListener('click',editMilkFavorites)}}}
 
 let dailyRecords=[]; let editingId=null; let formType=null; let pendingPhoto=""; let pendingPhotoUpload=""; let pendingPhotoFileId=""; let removePhotoFlag=false;
-// V4.5.7：尿布使用 inline SVG 顯示；純文字標題不再直接輸出 SVG 原始碼。
+// V4.5.8：尿布使用 inline SVG 顯示；純文字標題不再直接輸出 SVG 原始碼。
 const typeInfo={wake:["🌅","起床"],sleep:["😴","睡覺"],milk:["🍼","喝奶"],toilet:[`<svg class="diaper-icon" viewBox="0 0 64 64" aria-hidden="true"><path d="M10 17c7 4 14 6 22 6s15-2 22-6l-4 30c-1 6-6 10-12 10H26c-6 0-11-4-12-10L10 17z" fill="#fff" stroke="#78909c" stroke-width="3" stroke-linejoin="round"/><path d="M14 28c7 3 12 8 15 15M50 28c-7 3-12 8-15 15" fill="none" stroke="#b0bec5" stroke-width="3" stroke-linecap="round"/><path d="M11 18l10 2-2 8-7-2M53 18l-10 2 2 8 7-2" fill="#e8f1f5" stroke="#78909c" stroke-width="2" stroke-linejoin="round"/></svg>`,"尿布"],cry:["😭","哭鬧"],food:["🥣","副食品"],outing:["🚗","出遊"],bath:["🛁","洗澡"],milestone:["🌟","第一次"],doctor:["🏥","看診"]};
 function localDateStr(d=new Date()){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),da=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${da}`}
 function nowTime(){const d=new Date();return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`}
@@ -718,7 +718,7 @@ function loadDaily(){try{dailyRecords=JSON.parse(localStorage.getItem(DAILY_KEY)
 function persistDaily(render=true){
   try{localStorage.setItem(DAILY_KEY,JSON.stringify(dailyRecords))}
   catch(e){
-    // V4.5.7：舊版可能把照片 base64 留在 localStorage，iPhone 容量滿時會造成「按儲存沒反應」。
+    // V4.5.8：舊版可能把照片 base64 留在 localStorage，iPhone 容量滿時會造成「按儲存沒反應」。
     dailyRecords=dailyRecords.map(r=>{const x={...r};if(typeof x.photo==='string'&&x.photo.startsWith('data:image/'))delete x.photo;delete x.photoData;return x});
     try{localStorage.setItem(DAILY_KEY,JSON.stringify(dailyRecords))}catch(_){throw new Error('手機本機儲存空間不足')}
   }
@@ -778,23 +778,24 @@ function mergeDailyCloud(cloud){
   dailyRecords=[...local.values()];persistDaily(false)
 }
 function postDailySave(record){
-  // V4.5.7：iPhone Safari 對跨站 fetch + 大型照片 payload 偶爾會直接回 Load failed。
-  // 改用傳統隱藏 form POST 到 Apps Script；結果仍由既有 JSONP 輪詢確認，不依賴跨站 fetch 回應。
+  // V4.5.8：不要監聽 iframe 的第一次 load。iPhone Safari 會先載入 about:blank，
+  // 若此時把 iframe/form 移除，真正送往 Apps Script 的 POST 會被取消。
   return new Promise((resolve,reject)=>{
     const frameName='babyUpload_'+Date.now()+'_'+Math.random().toString(36).slice(2);
     const iframe=document.createElement('iframe');
-    iframe.name=frameName; iframe.style.display='none';
+    iframe.name=frameName;iframe.style.display='none';
     const form=document.createElement('form');
-    form.method='POST'; form.action=API_URL; form.target=frameName; form.style.display='none';
+    form.method='POST';form.action=API_URL;form.target=frameName;form.style.display='none';
     const add=(name,value)=>{const input=document.createElement('input');input.type='hidden';input.name=name;input.value=value;form.appendChild(input)};
-    add('mode',DAILY_MODE); add('action','save'); add('payload',JSON.stringify(record));
-    let submitted=false, timer=null;
-    const cleanup=()=>{if(timer)clearTimeout(timer);setTimeout(()=>{form.remove();iframe.remove()},300)};
-    iframe.addEventListener('load',()=>{if(!submitted)return;cleanup();resolve(true)},{once:false});
-    document.body.appendChild(iframe); document.body.appendChild(form);
-    timer=setTimeout(()=>{cleanup();resolve(true)},8000); // POST 可能成功但 Safari 不提供可讀 load 狀態，交給 JSONP 確認。
-    try{submitted=true;form.submit()}catch(e){cleanup();reject(e)}
-  })
+    add('mode',DAILY_MODE);add('action','save');add('payload',JSON.stringify(record));
+    document.body.appendChild(iframe);document.body.appendChild(form);
+    try{
+      form.submit();
+      // 先讓後續輪詢開始，但保留 form/iframe 足夠久，避免 Safari 中止 POST。
+      setTimeout(()=>resolve(true),250);
+      setTimeout(()=>{try{form.remove();iframe.remove()}catch(_){}},30000);
+    }catch(e){try{form.remove();iframe.remove()}catch(_){}reject(e)}
+  });
 }
 async function flushDailyPending(){let q=getPendingOps();if(!q.length)return true;const remain=[];for(const op of q){try{if(op.action==='save'){await postDailySave(op.record)}else if(op.action==='delete'){const res=await dailyJSONP({action:'delete',id:op.id});if(!res?.ok)throw new Error(res?.message||'刪除失敗')}await new Promise(r=>setTimeout(r,180))}catch(e){remain.push(op)}}setPendingOps(remain);return remain.length===0}
 async function syncDailyFromCloud(show=true){if(show)setDailyCloudStatus('每日紀錄：同步中…');try{await flushDailyPending();const res=await dailyJSONP({action:'list'});if(!res?.ok)throw new Error(res?.message||'同步失敗');mergeDailyCloud(res.records||[]);renderDaily();const todayCount=dailyRecords.filter(r=>normalizeDailyDate(r.date)===normalizeDailyDate(dailyDate.value)).length;setDailyCloudStatus(`每日紀錄：已同步 ${dailyRecords.length} 筆｜本日 ${todayCount} 筆`,true);return true}catch(e){setDailyCloudStatus('每日紀錄：目前使用本機資料（稍後可再同步）',false);renderDaily();return false}}
@@ -827,7 +828,13 @@ function postPhotoUploadOnly(record,uploadToken){
     const add=(name,value)=>{const input=document.createElement('input');input.type='hidden';input.name=name;input.value=value;form.appendChild(input)};
     add('mode',DAILY_MODE);add('action','uploadPhoto');add('payload',JSON.stringify(payload));
     document.body.appendChild(iframe);document.body.appendChild(form);
-    try{form.submit();setTimeout(()=>{form.remove();iframe.remove();resolve(true)},1200)}catch(e){form.remove();iframe.remove();reject(e)}
+    try{
+      form.submit();
+      // V4.5.8：舊版 1.2 秒就移除 iframe，iPhone 上大型 POST 會直接被取消。
+      // 現在只啟動狀態輪詢，DOM 保留 30 秒讓 Apps Script 收完整張照片。
+      setTimeout(()=>resolve(true),250);
+      setTimeout(()=>{try{form.remove();iframe.remove()}catch(_){}},30000);
+    }catch(e){try{form.remove();iframe.remove()}catch(_){}reject(e)}
   });
 }
 async function waitRecordExists(id){
@@ -976,7 +983,7 @@ function handlePhoto(e){
  r.onerror=()=>{if(preview)preview.innerHTML='<div class="photoHint">照片讀取失敗，請換一張再試。</div>';alert('照片讀取失敗，請換一張再試')};
  r.onload=()=>{const im=new Image();im.onload=()=>{
    try{
-     // V4.5.7：縮小照片，避免 iPhone Safari localStorage 被大型 base64 塞滿。
+     // V4.5.8：縮小照片，避免 iPhone Safari localStorage 被大型 base64 塞滿。
      const max=720,scale=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');
      c.width=Math.max(1,Math.round(im.width*scale));c.height=Math.max(1,Math.round(im.height*scale));
      const ctx=c.getContext('2d');if(!ctx)throw new Error('無法建立照片畫布');ctx.drawImage(im,0,0,c.width,c.height);
